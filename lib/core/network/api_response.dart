@@ -1,15 +1,3 @@
-/// Generic wrapper for every API response that follows the shape:
-/// ```json
-/// { "message": "...", "status": true, "data": ... }
-/// ```
-///
-/// Usage:
-/// ```dart
-/// final res = ApiResponse.fromJson(
-///   response.data,
-///   (d) => UserModel.fromJson(d as Map<String, dynamic>),
-/// );
-/// ```
 class ApiResponse<T> {
   const ApiResponse({
     required this.message,

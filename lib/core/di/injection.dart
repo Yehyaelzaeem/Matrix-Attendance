@@ -1,24 +1,76 @@
 import 'package:get_it/get_it.dart';
 
+import '../../features/admin/data/approvals_repo.dart';
+import '../../features/admin/logic/approvals_cubit.dart';
+import '../../features/admin/logic/approvals_tab_cubit.dart';
+import '../../features/attendance/data/attendance_repo.dart';
+import '../../features/attendance/logic/attendance_cubit.dart';
 import '../../features/auth/data/auth_repo.dart';
 import '../../features/auth/logic/auth_cubit.dart';
-import '../../features/profile/logic/profile_cubit.dart';
+import '../../features/board/data/board_repo.dart';
+import '../../features/board/logic/board_cubit.dart';
+import '../../features/decisions/data/decisions_repo.dart';
+import '../../features/decisions/logic/decisions_cubit.dart';
+import '../../features/layout/logic/layout_cubit.dart';
+import '../../features/projects/data/projects_repo.dart';
+import '../../features/projects/logic/projects_cubit.dart';
+import '../../features/reports/data/reports_repo.dart';
+import '../../features/reports/logic/reports_cubit.dart';
+import '../../features/requests/data/requests_repo.dart';
+import '../../features/requests/logic/requests_cubit.dart';
+import '../../features/tasks/data/tasks_repo.dart';
+import '../../features/tasks/logic/tasks_cubit.dart';
+import '../../features/team/data/team_repo.dart';
+import '../../features/team/logic/team_cubit.dart';
 import '../network/dio_client.dart';
 import '../storage/local_storage.dart';
 
 final getIt = GetIt.instance;
 
 Future<void> setupDi() async {
-  // ─── Storage ──────────────────────────────────────────────────────────────
   getIt.registerLazySingleton(() => LocalStorage());
 
-  // ─── Network ──────────────────────────────────────────────────────────────
   getIt.registerLazySingleton(() => DioClient(storage: getIt()));
 
-  // ─── Repos ────────────────────────────────────────────────────────────────
   getIt.registerLazySingleton(() => AuthRepo(dio: getIt(), storage: getIt()));
+  getIt.registerLazySingleton(() => AttendanceRepo());
+  getIt.registerLazySingleton(() => BoardRepo());
+  getIt.registerLazySingleton(() => TeamRepo());
+  getIt.registerLazySingleton(() => TasksRepo());
+  getIt.registerLazySingleton(() => ProjectsRepo());
+  getIt.registerLazySingleton(() => RequestsRepo());
+  getIt.registerLazySingleton(() => DecisionsRepo());
+  getIt.registerLazySingleton(() => ApprovalsRepo());
+  getIt.registerLazySingleton(() => ReportsRepo());
 
-  // ─── Cubits ───────────────────────────────────────────────────────────────
-  getIt.registerFactory(() => AuthCubit(getIt()));
-  getIt.registerFactory(() => ProfileCubit(getIt()));
+  getIt.registerLazySingleton(() => AuthCubit(getIt()));
+  _registerSessionCubits();
+}
+
+void _registerSessionCubits() {
+  getIt.registerLazySingleton(() => LayoutCubit());
+  getIt.registerLazySingleton(() => AttendanceCubit(getIt()));
+  getIt.registerLazySingleton(() => BoardCubit(getIt()));
+  getIt.registerLazySingleton(() => TeamCubit(getIt()));
+  getIt.registerLazySingleton(() => TasksCubit(getIt(), getIt()));
+  getIt.registerLazySingleton(() => ProjectsCubit(getIt()));
+  getIt.registerLazySingleton(() => RequestsCubit(getIt()));
+  getIt.registerLazySingleton(() => DecisionsCubit(getIt()));
+  getIt.registerLazySingleton(() => ApprovalsCubit(getIt()));
+  getIt.registerLazySingleton(() => ApprovalsTabCubit());
+  getIt.registerLazySingleton(() => ReportsCubit(getIt()));
+}
+
+Future<void> resetSession() async {
+  await getIt.resetLazySingleton<LayoutCubit>();
+  await getIt.resetLazySingleton<AttendanceCubit>();
+  await getIt.resetLazySingleton<BoardCubit>();
+  await getIt.resetLazySingleton<TeamCubit>();
+  await getIt.resetLazySingleton<TasksCubit>();
+  await getIt.resetLazySingleton<ProjectsCubit>();
+  await getIt.resetLazySingleton<RequestsCubit>();
+  await getIt.resetLazySingleton<DecisionsCubit>();
+  await getIt.resetLazySingleton<ApprovalsCubit>();
+  await getIt.resetLazySingleton<ApprovalsTabCubit>();
+  await getIt.resetLazySingleton<ReportsCubit>();
 }

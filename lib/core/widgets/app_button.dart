@@ -1,112 +1,168 @@
-import 'package:app_base/core/extensions/extensions.dart';
 import 'package:app_base/core/utils/app_colors.dart';
 import 'package:app_base/core/widgets/app_text.dart';
 import 'package:app_base/core/widgets/custom_loading_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../utils/app_constants.dart';
 import 'custom_tap_effect.dart';
 
+enum ButtonStyleType {
+  primary,
+  ghost,
+  white,
+  success,
+  danger,
+  softDanger,
+  warning,
+  plain
+}
+
 class CustomButton extends StatelessWidget {
-  final VoidCallback _onTap;
-  final Widget? _child;
-  final String? _title;
-  final Color? _color;
-  final Color? _borderColor;
-  final Color? _textColor;
-  final double? _width;
-  final double? _height;
-  final double? _fontSize;
-  final bool _isRounded;
-  final bool _isOutlined;
-  final bool _widerPadding;
-  final bool _loading;
-  final bool _expanded;
-  final double _radius;
-  final double? _customRadius;
+  final VoidCallback? onTap;
+  final Widget? child;
+  final String? title;
+  final Widget? icon;
+  final Color? color;
+  final Gradient? gradient;
+  final Color? borderColor;
+  final Color? textColor;
+  final double? width;
+  final double? height;
+  final double? fontSize;
+  final bool isOutlined;
+  final bool loading;
+  final bool enabled;
+  final bool withShadow;
+  final double radius;
+  final ButtonStyleType type;
 
   const CustomButton({
     super.key,
-    required VoidCallback onTap,
-    Widget? child,
-    String? title,
-    Color? color,
-    Color? borderColor,
-    Color? textColor,
-    double? width,
-    double? customRadius,
-    double? fontSize,
-    double? height,
-    double radius = 16,
-    bool isRounded = true,
-    bool isOutlined = false,
-    bool widerPadding = false,
-    bool loading = false,
-    bool expanded = true,
-  })  : _onTap = onTap,
-        _child = child,
-        _title = title,
-        _expanded = expanded,
-        _color = color,
-        _textColor = textColor,
-        _borderColor = borderColor,
-        _width = width,
-        _radius = radius,
-        _customRadius = customRadius,
-        _fontSize = fontSize,
-        _height = height,
-        _isRounded = isRounded,
-        _isOutlined = isOutlined,
-        _widerPadding = widerPadding,
-        _loading = loading;
+    required this.onTap,
+    this.child,
+    this.title,
+    this.icon,
+    this.color,
+    this.gradient,
+    this.borderColor,
+    this.textColor,
+    this.width,
+    this.height,
+    this.fontSize,
+    this.isOutlined = false,
+    this.loading = false,
+    this.enabled = true,
+    this.withShadow = true,
+    this.radius = AppConstants.buttonBorderRadius,
+    this.type = ButtonStyleType.primary,
+  });
+
+  Gradient? get _gradient {
+    if (color != null || isOutlined) return gradient;
+    return gradient ??
+        switch (type) {
+          ButtonStyleType.primary => AppColors.primaryGradient,
+          ButtonStyleType.danger => AppColors.dangerGradient,
+          ButtonStyleType.warning => AppColors.warningGradient,
+          _ => null,
+        };
+  }
+
+  Color get _background {
+    if (isOutlined) return Colors.transparent;
+    if (color != null) return color!;
+    return switch (type) {
+      ButtonStyleType.ghost => AppColors.primarySoftColor.themeColor,
+      ButtonStyleType.white => AppColors.cardColor.themeColor,
+      ButtonStyleType.success => AppColors.successColor.themeColor,
+      ButtonStyleType.softDanger => AppColors.errorSoftColor.themeColor,
+      ButtonStyleType.plain => Colors.transparent,
+      _ => AppColors.primaryColor.themeColor,
+    };
+  }
+
+  Color get _foreground {
+    if (textColor != null) return textColor!;
+    if (isOutlined) return borderColor ?? AppColors.primaryColor.themeColor;
+    return switch (type) {
+      ButtonStyleType.ghost ||
+      ButtonStyleType.white =>
+        AppColors.primaryColor.themeColor,
+      ButtonStyleType.softDanger => AppColors.errorColor.themeColor,
+      ButtonStyleType.plain => AppColors.textSecondaryColor.themeColor,
+      _ => Colors.white,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
-    double radius = _customRadius ?? _radius;
-    return SizedBox(
-      width: _width ?? double.infinity,
-      height: (_height ?? 46).h,
-      child: CustomTapEffect(
-        isClickable: !_loading,
-        onTap: _loading ? null : _onTap,
-        child: MaterialButton(
-          color: _isOutlined
-              ? Colors.transparent
-              : (_color ?? AppColors.primaryColor.darkColor),
-          highlightElevation: 0,
-          onPressed: _loading ? () {} : _onTap,
-          padding: !_widerPadding
-              ? EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w)
-              : EdgeInsets.symmetric(vertical: 12.h, horizontal: 16.w),
-          elevation: 0,
-          shape: _isRounded
-              ? RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(radius),
-                  side: BorderSide(
-                      color: _borderColor ?? Theme.of(context).primaryColor,
-                      width: 1.5.w))
-              : RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(radius),
-                  side: BorderSide(
-                      color: _borderColor ?? Theme.of(context).primaryColor,
-                      width: 1.5.w)),
-          child: _loading
-              ? CustomLoadingWidget(
-                  size: (_height ?? 20).h,
-                  color: _isOutlined ? _borderColor : Colors.white)
-              : _title != null
-                  ? Container(
-                      padding: 2.paddingBottom,
-                      child: AppText(
-                        _title,
-                        fontSize: _fontSize ?? 15,
-                        fontWeight: FontWeight.bold,
-                        color: _textColor ??
-                            (_isOutlined
-                                ? AppColors.primaryColor.themeColor
-                                : Colors.white),
-                      ))
-                  : _child ?? const SizedBox(),
+    final isActive = enabled && !loading && onTap != null;
+    final shadowColor = (_gradient?.colors.first ?? _background);
+    final hasShadow = withShadow &&
+        (_gradient != null || type == ButtonStyleType.success) &&
+        !isOutlined;
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: enabled ? 1 : 0.45,
+      child: SizedBox(
+        width: width ?? double.infinity,
+        height: (height ?? AppConstants.buttonHeight).h,
+        child: CustomTapEffect(
+          isClickable: isActive,
+          onTap: isActive ? onTap : null,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: _gradient == null ? _background : null,
+              gradient: _gradient,
+              borderRadius: BorderRadius.circular(radius.r),
+              border: isOutlined || borderColor != null
+                  ? Border.all(
+                      color: borderColor ?? AppColors.primaryColor.themeColor,
+                      width: 1.5)
+                  : null,
+              boxShadow: hasShadow
+                  ? [
+                      BoxShadow(
+                        color: shadowColor.withValues(alpha: 0.45),
+                        blurRadius: 24,
+                        spreadRadius: -10,
+                        offset: const Offset(0, 12),
+                      )
+                    ]
+                  : null,
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12.w),
+              child: Center(
+                child: loading
+                    ? CustomLoadingWidget(size: 22.h, color: _foreground)
+                    : child ??
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (icon != null) ...[
+                              IconTheme(
+                                data: IconThemeData(
+                                    color: _foreground, size: 20.sp),
+                                child: icon!,
+                              ),
+                              SizedBox(width: 8.w),
+                            ],
+                            Flexible(
+                              child: AppText(
+                                title ?? '',
+                                fontSize: fontSize ?? 16,
+                                fontWeight: FontWeight.w700,
+                                color: _foreground,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -66,11 +66,9 @@ class _CustomPaginationListViewState extends State<CustomPaginationListView> {
     super.initState();
     _scrollController = widget._controller ?? ScrollController();
 
-    // ✅ استخدام debounce مع threshold أكبر للتحميل المسبق
     _scrollController.addListener(_onScroll);
   }
 
-  // 🚀 Load more only when user scrolls down and is close to the end.
   void _onScroll() {
     if (_isLoadingMore || !widget._hasMorePages || widget._isLoading) return;
     if (!_scrollController.hasClients) return;
@@ -78,7 +76,6 @@ class _CustomPaginationListViewState extends State<CustomPaginationListView> {
     final position = _scrollController.position;
     if (!position.hasContentDimensions || position.outOfRange) return;
 
-    // Avoid triggering pagination while user scrolls upward from list end.
     if (position.userScrollDirection != ScrollDirection.reverse) return;
 
     const endReachedOffset = 200.0;
@@ -107,21 +104,16 @@ class _CustomPaginationListViewState extends State<CustomPaginationListView> {
   Widget build(BuildContext context) {
     final scrollView = CustomScrollView(
       scrollDirection: widget._scrollDirection ?? Axis.vertical,
-      // ✅ استخدام ClampingScrollPhysics للأداء الأفضل
       physics: widget._physics ?? const ClampingScrollPhysics(),
       controller: _scrollController,
-      // ✅ تفعيل الـ caching للعناصر
       cacheExtent: 3000,
       slivers: [
         if (widget._slivers != null) ...widget._slivers!,
-
-        // Loading State
         if (widget._isLoading)
           SliverFillRemaining(
             hasScrollBody: false,
             child: const Center(child: CustomLoadingWidget()),
           )
-        // Empty State
         else if (widget._itemCount == 0)
           const SliverFillRemaining(
             hasScrollBody: false,
@@ -130,24 +122,18 @@ class _CustomPaginationListViewState extends State<CustomPaginationListView> {
               children: [AppText('No Data Found')],
             )),
           )
-        // List Items
         else
           SliverList(
-            // ✅ استخدام delegate أكثر كفاءة
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                // ✅ إضافة RepaintBoundary لتحسين الأداء
                 return RepaintBoundary(
                   child: widget._builder(context, index),
                 );
               },
               childCount: widget._itemCount,
-              // ✅ تفعيل إعادة استخدام العناصر
-              addRepaintBoundaries: false, // لأننا أضفناه يدويًا
+              addRepaintBoundaries: false,
             ),
           ),
-
-        // Loading More Indicator
         if (!widget._isLoading && (widget._isMoreLoading || _isLoadingMore))
           const SliverToBoxAdapter(
             child: Padding(
@@ -162,7 +148,6 @@ class _CustomPaginationListViewState extends State<CustomPaginationListView> {
       ],
     );
 
-    // Return with or without RefreshIndicator
     if (widget._onRefresh != null) {
       return RefreshIndicator(
         onRefresh: widget._onRefresh!,

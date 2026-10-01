@@ -66,7 +66,7 @@ class _CustomPaginationGridviewState<T>
   final ScrollController _scrollController = ScrollController();
 
   bool _canLoadMore = true;
-  bool _isLoadingMore = false; // متغير local لمنع الـ requests المتكررة
+  bool _isLoadingMore = false;
 
   @override
   void dispose() {
@@ -82,17 +82,13 @@ class _CustomPaginationGridviewState<T>
   }
 
   void _onScroll() {
-    // منع أي request جديد إذا كان هناك request قيد التنفيذ
     if (_isLoadingMore || widget._isMoreLoading) return;
 
-    // تأكد من وجود صفحات أخرى
     if (!widget._hasMorePages) return;
 
-    // تأكد من أننا وصلنا لنهاية القائمة
     if (_scrollController.position.pixels <
         _scrollController.position.maxScrollExtent - 200) return;
 
-    // تأكد من عدم وجود loading
     if (widget._isLoading) return;
 
     if (!_canLoadMore) return;
@@ -102,7 +98,6 @@ class _CustomPaginationGridviewState<T>
 
     widget._onLoadMore();
 
-    // إعادة تفعيل الـ load more بعد فترة قصيرة
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         setState(() {
@@ -116,7 +111,6 @@ class _CustomPaginationGridviewState<T>
   @override
   void didUpdateWidget(covariant CustomPaginationGridview<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // إعادة تفعيل الـ load more عندما ينتهي الـ loading
     if (oldWidget._isMoreLoading && !widget._isMoreLoading) {
       _isLoadingMore = false;
       _canLoadMore = true;
@@ -129,8 +123,6 @@ class _CustomPaginationGridviewState<T>
       thumbColor: Theme.of(context).primaryColor,
       radius: const Radius.circular(8),
       controller: _scrollController,
-      // crossAxisMargin: kFormPaddingAllLarge,
-      // padding: EdgeInsets.symmetric(horizontal: kFormPaddingAllLarge.w),
       thickness: 8,
       thumbVisibility: true,
       trackVisibility: true,

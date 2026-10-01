@@ -7,21 +7,17 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../app/router/navigation_services.dart';
 import 'app_colors.dart';
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
 class AppOverlay {
   AppOverlay._();
 
   static OverlayEntry? _current;
 
-  /// Shows a red error banner at the top of the screen for [duration].
   static void showError(
     String message, {
     Duration duration = const Duration(seconds: 3),
   }) =>
       _show(message, _BannerType.error, duration);
 
-  /// Shows a green success banner at the top of the screen for [duration].
   static void showSuccess(
     String message, {
     Duration duration = const Duration(seconds: 3),
@@ -32,7 +28,6 @@ class AppOverlay {
     final overlay = NavigationService.navigationKey.currentState?.overlay;
     if (overlay == null) return;
 
-    // Dismiss any currently showing banner immediately.
     _current?.remove();
     _current = null;
 
@@ -54,11 +49,7 @@ class AppOverlay {
   }
 }
 
-// ── Internal types ────────────────────────────────────────────────────────────
-
 enum _BannerType { error, success }
-
-// ── Banner widget ─────────────────────────────────────────────────────────────
 
 class _AppBanner extends StatefulWidget {
   const _AppBanner({
@@ -120,7 +111,8 @@ class _AppBannerState extends State<_AppBanner>
   @override
   Widget build(BuildContext context) {
     final isError = widget.type == _BannerType.error;
-    final bg = isError ? const Color(0xFFB71C1C) : AppColors.successColor.light;
+    final bg =
+        isError ? AppColors.errorColor.light : AppColors.successColor.light;
     final icon = isError
         ? Icons.error_outline_rounded
         : Icons.check_circle_outline_rounded;

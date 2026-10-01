@@ -1,20 +1,26 @@
-import 'package:easy_localization/easy_localization.dart';
-import 'package:app_base/core/extensions/extensions.dart';
-import 'package:app_base/core/utils/app_images.dart';
-import 'package:app_base/core/widgets/app_text.dart';
+import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../app/router/routes.dart';
+import '../../../core/extensions/extensions.dart';
 import '../../../core/utils/app_colors.dart';
-import '../../../core/utils/custom_text_field_phone/custom_text_field_phone_code.dart';
 import '../../../core/utils/locale_keys.dart';
+import '../../../core/utils/media_picker.dart';
+import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_sheet.dart';
+import '../../../core/widgets/app_text.dart';
 import '../../../core/widgets/app_text_field.dart';
-import '../../../core/widgets/primary_header.dart';
+import '../../../core/widgets/field_label.dart';
+import '../../../core/widgets/select_field.dart';
+import '../data/models/register_payload.dart';
 import '../logic/auth_cubit.dart';
-import '../../profile/logic/profile_cubit.dart';
+import 'widgets/auth_step_bar.dart';
+import 'widgets/avatar_picker_row.dart';
+import 'widgets/job_picker_sheet.dart';
+import 'widgets/phone_input_field.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -24,226 +30,136 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
+  final _name = TextEditingController();
+  final _phone = TextEditingController();
+  String? _avatar;
+  String? _job;
+
+  bool get _isValid =>
+      _avatar != null &&
+      _job != null &&
+      Validators.isFullName(_name.text) &&
+      Validators.isValidPhone(_phone.text);
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _emailCtrl.dispose();
-    _phoneCtrl.dispose();
-    _passwordCtrl.dispose();
+    _name.dispose();
+    _phone.dispose();
     super.dispose();
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-    context.read<AuthCubit>().register(
-        name: _nameCtrl.text.trim(),
-        email: _emailCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim(),
-        password: _passwordCtrl.text,
-        countryCode: countryCode ?? '');
+  Future<void> _pickAvatar() async {
+    final path = await MediaPicker.pickAvatar();
+    if (path != null) setState(() => _avatar = path);
   }
 
-  String? countryCode = '+966';
+  Future<void> _pickJob() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final job = await AppSheet.show<String>(
+      context,
+      fullHeight: true,
+      child: JobPickerSheet(selected: _job),
+    );
+    if (job != null) setState(() => _job = job);
+  }
+
+  void _submit() {
+    context.read<AuthCubit>().sendRegisterOtp(RegisterPayload(
+          name: _name.text.trim(),
+          phone: _phone.text.trim(),
+          jobTitle: _job!,
+          avatarPath: _avatar!,
+        ));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthCubit, AuthState>(
-      listener: (context, state) {
-        if (state is AuthSuccess) {
-          context.read<ProfileCubit>().getProfile();
-          Navigator.pushNamedAndRemoveUntil(
-              context, Routes.layoutScreen, (_) => false);
-        }
-      },
-      child: BlocBuilder<AuthCubit, AuthState>(
-        builder: (context, state) {
-          final isLoading = state is AuthLoading;
-
-          return Scaffold(
-            body: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _HeaderSection(),
-                    Container(
-                      padding: 16.paddingHorizontal,
-                      width: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF4F5F3),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(30),
-                          topRight: Radius.circular(30),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          16.height,
-                          AppText(
-                            LocaleKeys.auth_register.tr(),
-                            fontSize: 24,
-                            color: const Color(0xFF17212B),
-                            fontWeight: FontWeight.w700,
-                          ),
-                          6.height,
-                          AppText(
-                            LocaleKeys.auth_registerSubtitle.tr(),
-                            fontSize: 13,
-                            color: const Color(0xFF9AA19C),
-                            fontWeight: FontWeight.w500,
-                          ),
-                          20.height,
-                          _FieldLabel(text: LocaleKeys.auth_name.tr()),
-                          8.height,
-                          CustomTextField(
-                            hint: LocaleKeys.auth_name.tr(),
-                            controller: _nameCtrl,
-                            keyboardType: TextInputType.name,
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return LocaleKeys.validation_required.tr();
-                              }
-                              return null;
-                            },
-                          ),
-                          14.height,
-                          _FieldLabel(text: LocaleKeys.auth_email.tr()),
-                          8.height,
-                          CustomTextField(
-                            hint: LocaleKeys.auth_email.tr(),
-                            controller: _emailCtrl,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return LocaleKeys.validation_required.tr();
-                              }
-                              if (!v.contains('@')) {
-                                return LocaleKeys.validation_invalidEmail.tr();
-                              }
-                              return null;
-                            },
-                          ),
-                          14.height,
-                          _FieldLabel(text: LocaleKeys.auth_phone.tr()),
-                          8.height,
-                          CustomTextFieldPhoneCode(
-                            hint: LocaleKeys.auth_phone.tr(),
-                            controller: _phoneCtrl,
-                            initialCountryCode: 'SA',
-                            egyptIsInitial: false,
-                            isRequired: false,
-                            keyboardType: TextInputType.phone,
-                            invalidNumberMessage:
-                                LocaleKeys.validation_invalidPhone.tr(),
-                            onCountryChanged: (country) {
-                              countryCode = country.dialCode == '20'
-                                  ? '+2'
-                                  : '+${country.dialCode}';
-                            },
-                          ),
-                          14.height,
-                          _FieldLabel(text: LocaleKeys.auth_password.tr()),
-                          8.height,
-                          CustomTextField(
-                            hint: LocaleKeys.auth_password.tr(),
-                            controller: _passwordCtrl,
-                            isPassword: true,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) {
-                                return LocaleKeys.validation_required.tr();
-                              }
-                              if (v.length < 6) {
-                                return LocaleKeys.validation_shortPassword.tr();
-                              }
-                              return null;
-                            },
-                          ),
-                          24.height,
-                          CustomButton(
-                            title: LocaleKeys.auth_register.tr(),
-                            onTap: _submit,
-                            loading: isLoading,
-                          ),
-                          20.height,
-                          Center(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AppText(
-                                  LocaleKeys.auth_alreadyHaveAccount.tr(),
-                                  fontSize: 14,
-                                  color: const Color(0xFF9AA19C),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                4.width,
-                                GestureDetector(
-                                  onTap: () => Navigator.pop(context),
-                                  child: AppText(
-                                    LocaleKeys.auth_signIn.tr(),
-                                    fontSize: 14,
-                                    color: AppColors.accentGold.themeColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          50.height,
-                        ],
-                      ),
+    return Scaffold(
+      backgroundColor: AppColors.cardColor.themeColor,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AuthStepBar(
+              label: LocaleKeys.auth_registerStep.tr(),
+              step: 1,
+              total: 2,
+              onBack: () => context.pop(),
+            ),
+            Padding(
+              padding: EdgeInsetsDirectional.fromSTEB(24.w, 18.h, 24.w, 30.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppText(LocaleKeys.auth_registerTitle.tr(),
+                      fontSize: 28, fontWeight: FontWeight.w800, height: 1.35),
+                  SizedBox(height: 4.h),
+                  AppText(LocaleKeys.auth_registerSubtitle.tr(),
+                      fontSize: 14.5,
+                      height: 1.8,
+                      color: AppColors.textSecondaryColor.themeColor),
+                  SizedBox(height: 22.h),
+                  AvatarPickerRow(path: _avatar, onTap: _pickAvatar),
+                  LabeledField(
+                    label: LocaleKeys.auth_fullName.tr(),
+                    child: CustomTextField(
+                      controller: _name,
+                      hint: LocaleKeys.auth_fullNameHint.tr(),
+                      prefixIcon: const Icon(Icons.person_outline_rounded),
+                      onChanged: (_) => setState(() {}),
                     ),
-                  ],
-                ),
+                  ),
+                  LabeledField(
+                    label: LocaleKeys.auth_phone.tr(),
+                    hint: LocaleKeys.auth_phoneOtpHint.tr(),
+                    child: PhoneInputField(
+                      controller: _phone,
+                      hint: LocaleKeys.auth_phoneHint.tr(),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  LabeledField(
+                    label: LocaleKeys.auth_jobTitle.tr(),
+                    child: SelectField(
+                      placeholder: LocaleKeys.auth_jobPlaceholder.tr(),
+                      value: _job,
+                      valueDirection: TextDirection.ltr,
+                      icon: Icons.work_outline_rounded,
+                      onTap: _pickJob,
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  BlocConsumer<AuthCubit, AuthState>(
+                    listenWhen: (_, s) => s is AuthOtpSent && s.isRegister,
+                    listener: (context, _) =>
+                        context.pushNamed(Routes.otpScreen),
+                    builder: (context, state) => CustomButton(
+                      title: LocaleKeys.auth_continue.tr(),
+                      enabled: _isValid,
+                      loading: state is AuthLoading,
+                      onTap: _submit,
+                    ),
+                  ),
+                  SizedBox(height: 18.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AppText(LocaleKeys.auth_haveAccount.tr(),
+                          color: AppColors.textSecondaryColor.themeColor),
+                      SizedBox(width: 4.w),
+                      GestureDetector(
+                        onTap: () => context.pop(),
+                        child: AppText(LocaleKeys.auth_loginLink.tr(),
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryColor.themeColor),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _HeaderSection extends StatelessWidget {
-  const _HeaderSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return PrimaryHeader(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 50.w),
-        child: Center(
-          child: Image.asset(
-            AppImages.logo4,
-            width: 220.w,
-            fit: BoxFit.contain,
-          ),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: AppText(
-        text,
-        fontSize: 14,
-        color: AppColors.primaryColor.themeColor,
-        fontWeight: FontWeight.w700,
       ),
     );
   }

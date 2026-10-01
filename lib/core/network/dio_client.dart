@@ -25,6 +25,7 @@ class DioClient {
     final dio = Dio(
       BaseOptions(
         baseUrl: ApiEndpoints.baseUrl,
+        validateStatus: (status) => status != null && status < 300,
         connectTimeout: _connectTimeout,
         receiveTimeout: _receiveTimeout,
         headers: {
@@ -56,7 +57,6 @@ class DioClient {
     return dio;
   }
 
-  // ─── GET ──────────────────────────────────────────────────────────────────
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -64,7 +64,6 @@ class DioClient {
   }) =>
       _dio.get<T>(path, queryParameters: queryParameters, options: options);
 
-  // ─── POST ─────────────────────────────────────────────────────────────────
   Future<Response<T>> post<T>(
     String path, {
     dynamic data,
@@ -74,7 +73,6 @@ class DioClient {
       _dio.post<T>(path,
           data: data, queryParameters: queryParameters, options: options);
 
-  // ─── PUT ──────────────────────────────────────────────────────────────────
   Future<Response<T>> put<T>(
     String path, {
     dynamic data,
@@ -84,7 +82,6 @@ class DioClient {
       _dio.put<T>(path,
           data: data, queryParameters: queryParameters, options: options);
 
-  // ─── PATCH ────────────────────────────────────────────────────────────────
   Future<Response<T>> patch<T>(
     String path, {
     dynamic data,
@@ -94,7 +91,6 @@ class DioClient {
       _dio.patch<T>(path,
           data: data, queryParameters: queryParameters, options: options);
 
-  // ─── DELETE ───────────────────────────────────────────────────────────────
   Future<Response<T>> delete<T>(
     String path, {
     dynamic data,
@@ -104,16 +100,6 @@ class DioClient {
       _dio.delete<T>(path,
           data: data, queryParameters: queryParameters, options: options);
 
-  // ─── POST FormData (images / files) ───────────────────────────────────────
-  ///
-  /// Example — single image:
-  /// ```dart
-  /// final form = FormData.fromMap({
-  ///   'title': 'My Event',
-  ///   'image': await MultipartFile.fromFile('/path/img.jpg', filename: 'img.jpg'),
-  /// });
-  /// await getIt<DioClient>().postForm('/events', form);
-  /// ```
   Future<Response<T>> postForm<T>(
     String path,
     FormData formData, {
@@ -128,7 +114,6 @@ class DioClient {
         onSendProgress: onSendProgress,
       );
 
-  // ─── PUT FormData ─────────────────────────────────────────────────────────
   Future<Response<T>> putForm<T>(
     String path,
     FormData formData, {
@@ -143,8 +128,6 @@ class DioClient {
         onSendProgress: onSendProgress,
       );
 }
-
-// ─── Auth Interceptor ─────────────────────────────────────────────────────────
 
 class _AuthInterceptor extends Interceptor {
   _AuthInterceptor(this._storage);

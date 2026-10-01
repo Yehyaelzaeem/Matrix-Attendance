@@ -3,11 +3,10 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import '../core/di/injection.dart';
-import '../core/storage/local_storage.dart';
 import '../core/utils/app_constants.dart';
 import '../features/auth/logic/auth_cubit.dart';
-import '../features/profile/logic/profile_cubit.dart';
 import 'router/app_router.dart';
 import 'router/routes.dart';
 import 'theme/app_theme.dart';
@@ -19,36 +18,28 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<AuthCubit>(create: (_) => getIt<AuthCubit>()),
-        BlocProvider<ProfileCubit>(
-          create: (_) {
-            final cubit = getIt<ProfileCubit>();
-            // Avoid unauthenticated profile request when app is in guest mode.
-            if (getIt<LocalStorage>().isLoggedIn) {
-              cubit.getProfile();
-            }
-            return cubit;
-          },
-        ),
+        BlocProvider<AuthCubit>.value(value: getIt<AuthCubit>()),
       ],
       child: ScreenUtilInit(
-          designSize: const Size(375, 812),
-          useInheritedMediaQuery: true,
-          builder: (BuildContext context, Widget? child) {
-            return MaterialApp(
-              title: AppConstants.appName,
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: ThemeMode.light,
-              initialRoute: Routes.splashScreen,
-              navigatorKey: NavigationService.navigationKey,
-              onGenerateRoute: RouteGenerator.generateRoute,
-              localizationsDelegates: context.localizationDelegates,
-              supportedLocales: context.supportedLocales,
-              locale: context.locale,
-            );
-          }),
+        designSize: const Size(375, 812),
+        minTextAdapt: true,
+        useInheritedMediaQuery: true,
+        builder: (BuildContext context, Widget? child) {
+          return MaterialApp(
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.light,
+            initialRoute: Routes.splashScreen,
+            navigatorKey: NavigationService.navigationKey,
+            onGenerateRoute: RouteGenerator.generateRoute,
+            localizationsDelegates: context.localizationDelegates,
+            supportedLocales: context.supportedLocales,
+            locale: context.locale,
+          );
+        },
+      ),
     );
   }
 }

@@ -213,7 +213,7 @@ class ErrorView extends StatelessWidget {
                           width: 200.w, height: 200.h, fit: BoxFit.fill),
                   AppText(
                     _message ?? '',
-                    fontSize: 16.sp,
+                    fontSize: 16,
                   ),
                   SizedBox(
                     height: 20.h,
@@ -255,23 +255,16 @@ class ErrorModel {
 }
 
 enum ErrorEnum {
-  /// It occurs when url is opened timeout.
   connectTimeout,
 
-  /// It occurs when url is sent timeout.
   sendTimeout,
 
-  ///It occurs when receiving timeout.
   receiveTimeout,
 
-  /// When the server response, but with a incorrect status, such as 404, 503...
   response,
 
-  /// When the request is cancelled, dio will throw a error with this type.
   cancel,
 
-  /// Default error type, Some other Error. In this case, you can
-  /// use the DioError.error if it is not null.
   other,
 
   auth,

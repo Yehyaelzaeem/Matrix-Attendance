@@ -15,6 +15,16 @@ final class AuthLoading extends AuthState {
   const AuthLoading();
 }
 
+final class AuthOtpSent extends AuthState {
+  final String phone;
+  final bool isRegister;
+  final int attempt;
+  const AuthOtpSent(this.phone, {required this.isRegister, this.attempt = 0});
+
+  @override
+  List<Object?> get props => [phone, isRegister, attempt];
+}
+
 final class AuthSuccess extends AuthState {
   final UserModel user;
   const AuthSuccess(this.user);

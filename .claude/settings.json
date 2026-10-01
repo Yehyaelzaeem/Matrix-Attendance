@@ -1,4 +1,8 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Bash(git init *)",
@@ -7,13 +11,41 @@
       "Bash(git commit *)",
       "Bash(xargs -0 sed -i '' 's/package:coffee_shop\\\\//package:app_base\\\\//g')",
       "Bash(sed -i '' -e 's/^name: coffee_shop/name: app_base/' -e 's/description: \"Coffee Shop Application.\"/description: \"Reusable Flutter base template.\"/' pubspec.yaml)",
-      "Bash(sed -i '' -e 's/namespace = \"com.example.coffee_shop\"/namespace = \"com.example.app_base\"/' -e 's/applicationId = \"com.example.coffee_shop\"/applicationId = \"com.example.app_base\"/' android/app/build.gradle.kts)",
-      "Bash(sed -i '' 's/android:label=\"coffee_shop\"/android:label=\"App Base\"/' android/app/src/main/AndroidManifest.xml)",
+      "Bash(sed -i '' -e 's/namespace = \"com.example.coffee_shop\"/namespace = \"com.matrix_attendance\"/' -e 's/applicationId = \"com.example.coffee_shop\"/applicationId = \"com.matrix_attendance\"/' android/app/build.gradle.kts)",
+      "Bash(sed -i '' 's/android:label=\"coffee_shop\"/android:label=\"Matrix Attendance\"/' android/app/src/main/AndroidManifest.xml)",
       "Bash(mkdir -p android/app/src/main/kotlin/com/example/app_base)",
       "Bash(echo \"exit:$?\")",
       "Bash(git rm *)",
       "Bash(awk '{print \"LocaleKeys.\"$3}')",
-      "Bash(awk '{print \"LocaleKeys.\"$4}')"
+      "Bash(awk '{print \"LocaleKeys.\"$4}')",
+      "Bash(echo \"clean:$?\")",
+      "Bash(tee /tmp/flutter_run.log)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --window-size=430,932 --user-data-dir=/tmp/shot_profile --screenshot=/tmp/shot_home.png --virtual-time-budget=6000 \"http://localhost:8765\")",
+      "Bash(osascript -e 'tell application \"Google Chrome\" to activate')",
+      "Bash(screencapture -x /tmp/shot_chrome_full.png)",
+      "Bash(system_profiler SPDisplaysDataType)",
+      "Bash(sw_vers)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --headless=new --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=430,932 --user-data-dir=/tmp/shot_profile2 --screenshot=/tmp/shot_home2.png --virtual-time-budget=20000 \"http://localhost:8765\")",
+      "Bash(pkill -f \"flutter run -d chrome\")",
+      "Bash(pkill -f \"web-port=8765\")",
+      "Bash(tee /tmp/flutter_run_ios.log)",
+      "Bash(osascript -e ' *)",
+      "Bash(pkill -f \"flutter run -d 324946B7\")",
+      "Bash(tee /tmp/flutter_run_ios2.log)",
+      "Bash(pkill -f \"flutter run\")",
+      "Bash(tee /tmp/flutter_run_ios3.log)",
+      "Bash(tee /tmp/flutter_run_ios4.log)",
+      "Bash(tee /tmp/flutter_run_full.log)",
+      "Bash(tee /tmp/flutter_run_visits.log)",
+      "Bash(tee /tmp/flutter_run_v2.log)",
+      "Bash(tee /tmp/flutter_run_ai.log)",
+      "Bash(tee /private/tmp/claude-501/-Users-yehyaelsayed-StudioProjects-Hazem-Vivacare-White-label/44a6269f-d4d4-45fb-959e-bfb4110fd5e1/scratchpad/flutter_run.log)",
+      "Bash(mkdir -p /private/tmp/claude-501/-Users-yehyaelsayed-StudioProjects-Hazem-Vivacare-White-label/44a6269f-d4d4-45fb-959e-bfb4110fd5e1/scratchpad)",
+      "Bash(mkfifo /private/tmp/claude-501/-Users-yehyaelsayed-StudioProjects-Hazem-Vivacare-White-label/44a6269f-d4d4-45fb-959e-bfb4110fd5e1/scratchpad/flutter_stdin)",
+      "Bash(tee /private/tmp/claude-501/-Users-yehyaelsayed-StudioProjects-Hazem-Vivacare-White-label/44a6269f-d4d4-45fb-959e-bfb4110fd5e1/scratchpad/flutter_run2.log)",
+      "Bash(osascript -e 'tell application \"Simulator\" to activate' -e 'delay 0.3' -e 'tell application \"System Events\" to tell process \"Simulator\" to get position of window 1' -e 'tell application \"System Events\" to tell process \"Simulator\" to get size of window 1')",
+      "Bash(rm -f /private/tmp/claude-501/-Users-yehyaelsayed-StudioProjects-Hazem-Vivacare-White-label/44a6269f-d4d4-45fb-959e-bfb4110fd5e1/scratchpad/flutter_stdin)",
+      "Bash(tee /private/tmp/claude-501/-Users-yehyaelsayed-StudioProjects-Hazem-Vivacare-White-label/44a6269f-d4d4-45fb-959e-bfb4110fd5e1/scratchpad/flutter_run4.log)"
     ]
   }
 }

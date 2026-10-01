@@ -1,47 +1,70 @@
 import 'package:equatable/equatable.dart';
 
+import 'user_role.dart';
+
 class UserModel extends Equatable {
-  final int id;
+  final String id;
   final String name;
-  final String email;
-  final String? phone;
-  final String? avatar;
-  final String? token;
-  final String? createdAt;
-  final String? countryCode;
+  final String phone;
+  final String jobTitle;
+  final String? email;
+  final String? avatarPath;
+  final UserRole role;
+  final AccountStatus status;
 
   const UserModel({
     required this.id,
     required this.name,
-    required this.email,
-    this.phone,
-    this.countryCode,
-    this.avatar,
-    this.token,
-    this.createdAt,
+    required this.phone,
+    required this.jobTitle,
+    required this.role,
+    required this.status,
+    this.email,
+    this.avatarPath,
   });
 
+  bool get isActive => status == AccountStatus.active;
+
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
-        id: json['id'] as int,
+        id: json['id'].toString(),
         name: json['name'] as String,
-        email: json['email'] as String,
-        phone: json['phone'] ?? json['phone_number'] ?? '',
-        avatar: json['photo'] as String?,
-        countryCode: json['country_code'] as String?,
-        token: json['token'] as String?,
-        createdAt: json['created_at'] as String?,
+        phone: json['phone'] as String,
+        jobTitle: (json['job_title'] ?? '') as String,
+        email: json['email'] as String?,
+        avatarPath: (json['avatar_url'] ?? json['avatar']) as String?,
+        role: UserRole.fromName(json['role'] as String?),
+        status: AccountStatus.fromName(json['status'] as String?),
       );
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
-        'email': email,
         'phone': phone,
-        'avatar': avatar,
-        'token': token,
-        'created_at': createdAt,
+        'job_title': jobTitle,
+        'email': email,
+        'avatar': avatarPath,
+        'role': role.name,
+        'status': status.name,
       };
 
+  UserModel copyWith({
+    String? name,
+    String? jobTitle,
+    String? email,
+    AccountStatus? status,
+  }) =>
+      UserModel(
+        id: id,
+        name: name ?? this.name,
+        phone: phone,
+        jobTitle: jobTitle ?? this.jobTitle,
+        email: email ?? this.email,
+        avatarPath: avatarPath,
+        role: role,
+        status: status ?? this.status,
+      );
+
   @override
-  List<Object?> get props => [id, name, email, phone, avatar, token, createdAt];
+  List<Object?> get props =>
+      [id, name, phone, jobTitle, email, avatarPath, role, status];
 }

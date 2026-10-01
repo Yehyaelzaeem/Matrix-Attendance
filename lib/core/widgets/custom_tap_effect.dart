@@ -4,7 +4,7 @@ class CustomTapEffect extends StatefulWidget {
   const CustomTapEffect({
     super.key,
     this.isClickable = true,
-    this.enableAnimation = true, // 👈 تتحكم في الأنيميشن
+    this.enableAnimation = true,
     required this.onTap,
     required this.child,
   });
@@ -32,7 +32,6 @@ class _TapEffectState extends State<CustomTapEffect>
       duration: const Duration(milliseconds: 800),
     );
 
-    /// يبدأ ثابت
     animationController!.value = 1.0;
   }
 
@@ -40,7 +39,6 @@ class _TapEffectState extends State<CustomTapEffect>
   void didUpdateWidget(covariant CustomTapEffect oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    /// لو الأنيميشن اتقفل أثناء التشغيل يرجع ثابت فورًا
     if (!widget.enableAnimation) {
       animationController!.value = 1.0;
     }

@@ -1,7 +1,5 @@
 import 'package:equatable/equatable.dart';
 
-/// Pagination metadata returned by the server.
-/// Maps to the `pagination` object in list API responses.
 class PaginationMeta extends Equatable {
   const PaginationMeta({
     required this.currentPage,
@@ -31,7 +29,6 @@ class PaginationMeta extends Equatable {
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
-  /// Empty meta — useful as an initial placeholder.
   static const empty = PaginationMeta(
     currentPage: 0,
     lastPage: 0,
@@ -45,7 +42,6 @@ class PaginationMeta extends Equatable {
       [currentPage, lastPage, perPage, total, hasMorePages];
 }
 
-/// A paginated API result: the item list + its pagination metadata.
 class PaginatedData<T> {
   const PaginatedData({required this.items, required this.pagination});
 

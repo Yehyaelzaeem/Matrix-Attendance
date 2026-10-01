@@ -4,6 +4,7 @@ import 'package:get_storage/get_storage.dart';
 
 import 'app/app.dart';
 import 'core/di/injection.dart';
+import 'core/storage/local_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,11 +14,11 @@ void main() async {
 
   runApp(
     tr.EasyLocalization(
-      supportedLocales: const [Locale('en'), Locale('ar')],
+      supportedLocales: const [Locale('ar'), Locale('en')],
       path: 'assets/translations',
-      fallbackLocale: const Locale('en'),
-      startLocale: const Locale('ar'),
-      child: const SafeArea(top: false, child: MyApp()),
+      fallbackLocale: const Locale('ar'),
+      startLocale: Locale(getIt<LocalStorage>().getLang()),
+      child: const MyApp(),
     ),
   );
 }

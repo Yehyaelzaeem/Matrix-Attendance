@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../app/router/navigation_services.dart';
 
-/// Extension Context
 extension Navigation on BuildContext {
   Future<dynamic> pushNamed(String routeName, {Object? arguments}) {
     return Navigator.of(this).pushNamed(routeName, arguments: arguments);
@@ -30,7 +29,6 @@ extension SizeExtension on BuildContext {
   double get appHeight => mediaQuery.size.height;
 }
 
-/// Extension Size
 extension View on num {
   SizedBox get height => SizedBox(height: toDouble().h);
   SizedBox get width => SizedBox(width: toDouble().w);
