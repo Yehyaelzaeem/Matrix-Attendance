@@ -14,7 +14,7 @@ class ScheduleMatrix extends StatelessWidget {
       {super.key, required this.employees, required this.onTapEmployee});
 
   final List<EmployeeModel> employees;
-  final ValueChanged<String> onTapEmployee;
+  final ValueChanged<EmployeeModel> onTapEmployee;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +55,7 @@ class ScheduleMatrix extends StatelessWidget {
               decoration: BoxDecoration(border: Border(top: line)),
               children: [
                 TableRowInkWell(
-                  onTap: () => onTapEmployee(e.name),
+                  onTap: () => onTapEmployee(e),
                   child: cell(Align(
                     alignment: AlignmentDirectional.centerStart,
                     child: AppText(e.name,
@@ -66,7 +66,7 @@ class ScheduleMatrix extends StatelessWidget {
                 ),
                 for (final d in DateHelper.weekDays)
                   TableRowInkWell(
-                    onTap: () => onTapEmployee(e.name),
+                    onTap: () => onTapEmployee(e),
                     child: cell(Text((e.schedule[d] ?? DayType.off).emoji,
                         style: TextStyle(fontSize: 15.sp))),
                   ),

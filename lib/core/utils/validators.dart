@@ -28,6 +28,14 @@ class Validators {
     return '+20 ${phone.substring(1, 4)} ••• ${phone.substring(phone.length - 4)}';
   }
 
+  static String spacedPhone(String phone) {
+    if (phone.length != 11 || !phone.startsWith('0')) return phone;
+    return '+20 ${phone.substring(1, 4)} ${phone.substring(4, 7)} ${phone.substring(7)}';
+  }
+
+  static String e164Phone(String phone) =>
+      phone.startsWith('0') ? '+20${phone.substring(1)}' : phone;
+
   static String internationalPhone(String phone) =>
       phone.startsWith('0') ? '+20 ${phone.substring(1)}' : phone;
 }

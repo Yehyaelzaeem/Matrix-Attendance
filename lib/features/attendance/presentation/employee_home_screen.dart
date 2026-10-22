@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../core/di/injection.dart';
 import '../../../core/utils/app_overlay.dart';
 import '../../../core/utils/locale_keys.dart';
 import '../../../core/widgets/app_sheet.dart';
@@ -36,11 +35,11 @@ class EmployeeHomeScreen extends StatefulWidget {
 }
 
 class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
-  final _cubit = getIt<AttendanceCubit>();
+  late final AttendanceCubit _cubit = context.read<AttendanceCubit>();
 
   void _openRequestFromCheckIn() {
     Navigator.of(context).pop();
-    getIt<LayoutCubit>().select(AppTab.requests);
+    context.read<LayoutCubit>().select(AppTab.requests);
     Future.delayed(const Duration(milliseconds: 350), () {
       if (!mounted) return;
       AppSheet.show(context,
@@ -53,10 +52,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
       case AttendancePhase.idle:
         AppSheet.show(
           context,
-          child: CheckInSheet(
-            expected: overview.day.expected,
-            onSubmitRequest: _openRequestFromCheckIn,
-          ),
+          child: CheckInSheet(onSubmitRequest: _openRequestFromCheckIn),
         );
       case AttendancePhase.working:
         AppSheet.show(context, child: CheckoutSheet(day: overview.day));
@@ -81,7 +77,6 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AttendanceCubit, AttendanceState>(
-      bloc: _cubit,
       builder: (context, state) => CustomScreenStateLayout(
         isLoading: state is AttendanceInitial || state is AttendanceLoading,
         error: state is AttendanceError
@@ -91,33 +86,39 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
         onRetry: _cubit.load,
         builder: (_) {
           final overview = (state as AttendanceSuccess).overview;
-          return SingleChildScrollView(
-            child: HeaderOverlapLayout(
-              header: const HomeHeader(),
-              body: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ClockCard(
-                    overview: overview,
-                    onMainAction: () => _onMain(overview),
-                    onPauseAction: () => _onPause(overview),
-                  ),
-                  const HomeTasksSection(),
-                  const PinnedDecisionSection(),
-                  SectionTitle(
-                    title: LocaleKeys.attendance_myWeek.tr(),
-                    actionLabel: LocaleKeys.common_view.tr(),
-                    onAction: () => getIt<LayoutCubit>().select(AppTab.profile),
-                  ),
-                  WeekStrip(schedule: overview.schedule),
-                  SectionTitle(
-                    title: LocaleKeys.attendance_thisMonth.tr(),
-                    actionLabel: LocaleKeys.attendance_report.tr(),
-                    onAction: () => getIt<LayoutCubit>().select(AppTab.profile),
-                  ),
-                  MonthStatsGrid(month: overview.month),
-                  SizedBox(height: 24.h),
-                ],
+          return RefreshIndicator(
+            onRefresh: _cubit.refresh,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: HeaderOverlapLayout(
+                header: const HomeHeader(),
+                body: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ClockCard(
+                      overview: overview,
+                      onMainAction: () => _onMain(overview),
+                      onPauseAction: () => _onPause(overview),
+                    ),
+                    const HomeTasksSection(),
+                    const PinnedDecisionSection(),
+                    SectionTitle(
+                      title: LocaleKeys.attendance_myWeek.tr(),
+                      actionLabel: LocaleKeys.common_view.tr(),
+                      onAction: () =>
+                          context.read<LayoutCubit>().select(AppTab.profile),
+                    ),
+                    WeekStrip(schedule: overview.schedule),
+                    SectionTitle(
+                      title: LocaleKeys.attendance_thisMonth.tr(),
+                      actionLabel: LocaleKeys.attendance_report.tr(),
+                      onAction: () =>
+                          context.read<LayoutCubit>().select(AppTab.profile),
+                    ),
+                    MonthStatsGrid(month: overview.month),
+                    SizedBox(height: 24.h),
+                  ],
+                ),
               ),
             ),
           );

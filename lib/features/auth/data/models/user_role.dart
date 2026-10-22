@@ -30,11 +30,13 @@ enum UserRole {
 
 enum AccountStatus {
   pending,
-  active;
+  active,
+  suspended,
+  rejected;
 
   static AccountStatus fromName(String? name) =>
       AccountStatus.values.firstWhere(
         (e) => e.name == name,
-        orElse: () => AccountStatus.pending,
+        orElse: () => AccountStatus.active,
       );
 }

@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_pickers.dart';
 import '../../../../core/utils/date_helper.dart';
@@ -24,6 +24,7 @@ class AddHolidaySheet extends StatefulWidget {
 class _AddHolidaySheetState extends State<AddHolidaySheet> {
   final _name = TextEditingController();
   DateTime _date = DateHelper.fromToday(10);
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -32,9 +33,15 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
   }
 
   Future<void> _add() async {
+    setState(() => _saving = true);
     final navigator = Navigator.of(context);
-    await getIt<TeamCubit>().addHoliday(_date, _name.text.trim());
-    navigator.pop();
+    final ok =
+        await context.read<TeamCubit>().addHoliday(_date, _name.text.trim());
+    if (ok) {
+      navigator.pop();
+    } else if (mounted) {
+      setState(() => _saving = false);
+    }
   }
 
   @override
@@ -73,6 +80,7 @@ class _AddHolidaySheetState extends State<AddHolidaySheet> {
         CustomButton(
           title: LocaleKeys.common_add.tr(),
           enabled: _name.text.trim().length >= 3,
+          loading: _saving,
           onTap: _add,
         ),
       ],

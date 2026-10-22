@@ -56,47 +56,49 @@ class _OtpInputState extends State<OtpInput> {
         textDirection: TextDirection.ltr,
         child: Stack(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(AppConstants.otpLength, (i) {
-                final filled = i < code.length;
-                final active = _focus.hasFocus && i == code.length;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 42.w,
-                  height: 56.h,
-                  margin: EdgeInsets.symmetric(horizontal: 3.5.w),
-                  transform: Matrix4.translationValues(0, active ? -2 : 0, 0),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: filled
-                        ? AppColors.primarySoftColor.themeColor
-                        : AppColors.cardColor.themeColor,
-                    borderRadius: BorderRadius.circular(15.r),
-                    border: Border.all(
-                      color: filled || active
-                          ? AppColors.primaryColor.themeColor
-                          : AppColors.dividerColor.themeColor,
-                      width: 1.5,
+            FittedBox(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(AppConstants.otpLength, (i) {
+                  final filled = i < code.length;
+                  final active = _focus.hasFocus && i == code.length;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 42.w,
+                    height: 56.h,
+                    margin: EdgeInsets.symmetric(horizontal: 3.5.w),
+                    transform: Matrix4.translationValues(0, active ? -2 : 0, 0),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: filled
+                          ? AppColors.primarySoftColor.themeColor
+                          : AppColors.cardColor.themeColor,
+                      borderRadius: BorderRadius.circular(15.r),
+                      border: Border.all(
+                        color: filled || active
+                            ? AppColors.primaryColor.themeColor
+                            : AppColors.dividerColor.themeColor,
+                        width: 1.5,
+                      ),
+                      boxShadow: active
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primaryColor.themeColor
+                                    .withValues(alpha: 0.12),
+                                spreadRadius: 4,
+                              ),
+                            ]
+                          : null,
                     ),
-                    boxShadow: active
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primaryColor.themeColor
-                                  .withValues(alpha: 0.12),
-                              spreadRadius: 4,
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: AppText(
-                    filled ? code[i] : '',
-                    numeric: true,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                  ),
-                );
-              }),
+                    child: AppText(
+                      filled ? code[i] : '',
+                      numeric: true,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  );
+                }),
+              ),
             ),
             Positioned.fill(
               child: Opacity(

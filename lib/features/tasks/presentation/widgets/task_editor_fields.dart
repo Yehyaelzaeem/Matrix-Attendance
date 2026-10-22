@@ -11,6 +11,7 @@ import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/choice_chips.dart';
 import '../../../../core/widgets/field_label.dart';
 import '../../../../core/widgets/select_field.dart';
+import '../../../projects/data/models/project_model.dart';
 import '../../data/models/task_enums.dart';
 import '../../data/models/task_model.dart';
 import 'task_due_label.dart';
@@ -18,14 +19,16 @@ import 'task_due_label.dart';
 class TaskEditValues {
   const TaskEditValues({
     required this.status,
-    required this.assignee,
+    required this.assigneeId,
+    required this.assigneeName,
     required this.priority,
     required this.due,
     required this.estimate,
   });
 
   final TaskStatus status;
-  final String assignee;
+  final int assigneeId;
+  final String assigneeName;
   final TaskPriority priority;
   final DateTime due;
   final double estimate;
@@ -35,7 +38,7 @@ class TaskEditorFields extends StatefulWidget {
   const TaskEditorFields({super.key, required this.task, required this.team});
 
   final TaskModel task;
-  final List<String> team;
+  final List<TeamMember> team;
 
   @override
   State<TaskEditorFields> createState() => TaskEditorFieldsState();
@@ -43,15 +46,28 @@ class TaskEditorFields extends StatefulWidget {
 
 class TaskEditorFieldsState extends State<TaskEditorFields> {
   late TaskStatus _status = widget.task.status;
-  late String _assignee = widget.task.assignee;
+  late int _assigneeId = widget.task.assigneeId;
   late TaskPriority _priority = widget.task.priority;
-  late DateTime _due = widget.task.due;
+  late DateTime _due = widget.task.due ?? DateHelper.today();
+
+  List<TeamMember> get _team => [
+        if (!widget.team.any((m) => m.userId == widget.task.assigneeId))
+          TeamMember(
+              userId: widget.task.assigneeId,
+              name: widget.task.assignee,
+              role: ''),
+        ...widget.team,
+      ];
   late final _estimate =
       TextEditingController(text: TaskDueLabel.hours(widget.task.estimate));
 
   TaskEditValues get values => TaskEditValues(
         status: _status,
-        assignee: _assignee,
+        assigneeId: _assigneeId,
+        assigneeName: _team
+            .firstWhere((m) => m.userId == _assigneeId,
+                orElse: () => _team.first)
+            .name,
         priority: _priority,
         due: _due,
         estimate: double.tryParse(_estimate.text) ?? widget.task.estimate,
@@ -78,7 +94,7 @@ class TaskEditorFieldsState extends State<TaskEditorFields> {
 
   @override
   Widget build(BuildContext context) {
-    final team = {...widget.team, widget.task.assignee}.toList();
+    final team = _team;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -92,12 +108,13 @@ class TaskEditorFieldsState extends State<TaskEditorFields> {
         ),
         LabeledField(
           label: LocaleKeys.tasks_assignee.tr(),
-          child: ChoiceChipsPicker<String>(
+          child: ChoiceChipsPicker<int>(
             items: [
-              for (final n in team) ChoiceItem(n, Validators.firstName(n))
+              for (final m in team)
+                ChoiceItem(m.userId, Validators.firstName(m.name))
             ],
-            isSelected: (n) => n == _assignee,
-            onTap: (n) => setState(() => _assignee = n),
+            isSelected: (id) => id == _assigneeId,
+            onTap: (id) => setState(() => _assigneeId = id),
           ),
         ),
         LabeledField(

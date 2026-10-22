@@ -2,8 +2,9 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/network/network_exceptions.dart';
 import '../../../core/utils/app_overlay.dart';
-import '../../../core/utils/date_helper.dart';
+import '../../../core/utils/json_reader.dart';
 import '../../../core/utils/locale_keys.dart';
 import '../../../core/utils/validators.dart';
 import '../../auth/data/models/user_role.dart';
@@ -20,63 +21,95 @@ class TasksCubit extends Cubit<TasksState> {
   final TasksRepo _repo;
   final AuthCubit _auth;
 
+  int get meId => _auth.currentUser?.id ?? -1;
+
   String get me => _auth.currentUser?.name ?? '';
 
   bool get canManage => _auth.currentUser?.role.canManageTasks ?? false;
 
   bool get isAdmin => _auth.currentUser?.role == UserRole.admin;
 
+  bool get _mine => _auth.currentUser?.role == UserRole.employee;
+
   List<TaskModel> get tasks =>
       state is TasksSuccess ? (state as TasksSuccess).tasks : const [];
 
-  TaskModel? byId(String id) =>
+  TaskCounts get counts => state is TasksSuccess
+      ? (state as TasksSuccess).counts
+      : const TaskCounts();
+
+  Map<int, String> get projectNames => {
+        for (final t in tasks) t.projectId: t.projectName,
+      };
+
+  Map<int, ({String name, String? image})> get assignees => {
+        for (final t in tasks)
+          t.assigneeId: (name: t.assignee, image: t.assigneeImage),
+      };
+
+  TaskModel? byId(int id) =>
       state is TasksSuccess ? (state as TasksSuccess).byId(id) : null;
 
+  int _version = 0;
+
   Future<void> load() async {
-    if (state is TasksSuccess) return;
+    if (state is TasksSuccess || state is TasksLoading) return;
     emit(const TasksLoading());
+    await refresh();
+  }
+
+  Future<void> refresh() async {
     try {
-      emit(TasksSuccess(await _repo.getTasks()));
-    } catch (_) {
-      final msg = LocaleKeys.error_generic.tr();
-      AppOverlay.showError(msg);
-      emit(TasksError(msg));
+      final (list, counts) = await _repo.getTasks(mine: _mine);
+      final current = {for (final t in tasks) t.id: t};
+      emit(TasksSuccess(
+        [for (final t in list) current[t.id]?.mergeSummary(t) ?? t],
+        counts: counts,
+        version: ++_version,
+      ));
+    } catch (e) {
+      final msg = NetworkException.from(e).message;
+      if (state is TasksSuccess) {
+        AppOverlay.showError(msg);
+      } else {
+        emit(TasksError(msg));
+      }
     }
   }
 
-  String get _actor => Validators.firstName(me);
-
-  TaskComment _system(String text) => TaskComment(
-      text: text, at: LocaleKeys.common_now.tr(), kind: CommentKind.system);
-
-  Future<void> _put(TaskModel task) async {
-    await _repo.save(task);
-    emit(TasksSuccess([
-      for (final t in tasks)
-        if (t.id == task.id) task else t,
-      if (byId(task.id) == null) task,
-    ]));
+  void _put(TaskModel task) {
+    final exists = byId(task.id) != null;
+    emit(TasksSuccess(
+      exists
+          ? [for (final t in tasks) t.id == task.id ? task : t]
+          : [task, ...tasks],
+      counts: counts,
+      version: ++_version,
+    ));
   }
 
-  Future<void> move(String id, TaskStatus status) async {
+  Future<void> loadDetail(int id) async {
+    try {
+      _put(await _repo.getTask(id));
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+    }
+  }
+
+  Future<bool> _transition(int id, TaskStatus to, {String? comment}) async {
+    try {
+      _put(await _repo.transition(id, to, comment: comment));
+      return true;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return false;
+    }
+  }
+
+  Future<void> move(int id, TaskStatus status) async {
     final task = byId(id);
     if (task == null) return;
-    final args = {'name': _actor};
-    final note = switch (status) {
-      TaskStatus.doing => LocaleKeys.tasks_sysStarted.tr(namedArgs: args),
-      TaskStatus.review => LocaleKeys.tasks_sysSubmitted.tr(namedArgs: args),
-      TaskStatus.test => LocaleKeys.tasks_sysToTest.tr(namedArgs: args),
-      TaskStatus.done => LocaleKeys.tasks_sysDone.tr(namedArgs: args),
-      TaskStatus.todo => LocaleKeys.tasks_sysStatus
-          .tr(namedArgs: {...args, 'status': status.label}),
-    };
-    await _put(task.copyWith(
-      status: status,
-      doneAt: status == TaskStatus.done ? DateHelper.today() : null,
-      clearDoneAt: status != TaskStatus.done,
-      returned: status == TaskStatus.doing ? task.returned : false,
-      comments: [...task.comments, _system(note)],
-    ));
+    if (!await _transition(id, status)) return;
     final assignee = {'name': Validators.firstName(task.assignee)};
     AppOverlay.showSuccess(switch (status) {
       TaskStatus.doing => LocaleKeys.tasks_toastStarted.tr(),
@@ -87,155 +120,165 @@ class TasksCubit extends Cubit<TasksState> {
     });
   }
 
-  Future<void> returnTask(String id, String reason) async {
+  Future<void> returnTask(int id, String reason) async {
     final task = byId(id);
     if (task == null) return;
-    await _put(task.copyWith(
-      status: TaskStatus.doing,
-      clearDoneAt: true,
-      returned: true,
-      returns: task.returns + 1,
-      comments: [
-        ...task.comments,
-        TaskComment(
-            by: me,
-            text: reason,
-            at: LocaleKeys.common_now.tr(),
-            kind: CommentKind.returned),
-      ],
-    ));
-    AppOverlay.showSuccess(LocaleKeys.tasks_toastReturned
-        .tr(namedArgs: {'name': Validators.firstName(task.assignee)}));
+    if (await _transition(id, TaskStatus.doing, comment: reason)) {
+      AppOverlay.showSuccess(LocaleKeys.tasks_toastReturned
+          .tr(namedArgs: {'name': Validators.firstName(task.assignee)}));
+    }
   }
 
-  Future<void> toggleDone(String id) async {
+  Future<void> toggleDone(int id) async {
     final task = byId(id);
     if (task == null) return;
     if (task.isDone) {
-      await _put(task.copyWith(status: TaskStatus.doing, clearDoneAt: true));
-    } else {
-      await _put(
-          task.copyWith(status: TaskStatus.done, doneAt: DateHelper.today()));
+      await _transition(id, TaskStatus.doing,
+          comment: LocaleKeys.tasks_reopenedComment.tr());
+    } else if (await _transition(id, TaskStatus.done)) {
       AppOverlay.showSuccess(LocaleKeys.tasks_toastMarkedDone
           .tr(namedArgs: {'title': task.title}));
     }
   }
 
-  Future<void> logTime(String id, double hours) async {
-    final task = byId(id);
-    if (task == null) return;
-    final startNow = task.status == TaskStatus.todo;
-    await _put(task.copyWith(
-      spent: double.parse((task.spent + hours).toStringAsFixed(1)),
-      status: startNow ? TaskStatus.doing : null,
-      comments: startNow
-          ? [
-              ...task.comments,
-              _system(
-                  LocaleKeys.tasks_sysStarted.tr(namedArgs: {'name': _actor})),
-            ]
-          : null,
-    ));
-    AppOverlay.showSuccess(hours < 1
-        ? LocaleKeys.tasks_toastLogged30.tr()
-        : LocaleKeys.tasks_toastLoggedHours
-            .tr(namedArgs: {'n': '${hours.round()}'}));
+  Future<void> logTime(int id, double hours) async {
+    try {
+      await _repo.logTime(id, hours);
+      _put(await _repo.getTask(id));
+      AppOverlay.showSuccess(hours < 1
+          ? LocaleKeys.tasks_toastLogged30.tr()
+          : LocaleKeys.tasks_toastLoggedHours
+              .tr(namedArgs: {'n': '${hours.round()}'}));
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+    }
   }
 
-  Future<void> saveEdits(
-    String id, {
+  Future<bool> saveEdits(
+    int id, {
     required TaskStatus status,
-    required String assignee,
+    required int assigneeId,
+    required String assigneeName,
     required TaskPriority priority,
     required DateTime due,
     required double estimate,
   }) async {
     final task = byId(id);
-    if (task == null) return;
-    final notes = <TaskComment>[
-      if (status != task.status)
-        _system(LocaleKeys.tasks_sysStatus
-            .tr(namedArgs: {'name': _actor, 'status': status.label})),
-      if (assignee != task.assignee)
-        _system(LocaleKeys.tasks_sysReassigned.tr(
-            namedArgs: {'name': _actor, 'to': Validators.firstName(assignee)})),
-    ];
-    await _put(task.copyWith(
-      status: status,
-      assignee: assignee,
-      priority: priority,
-      due: due,
-      estimate: estimate,
-      doneAt: status == TaskStatus.done
-          ? (task.doneAt ?? DateHelper.today())
-          : null,
-      clearDoneAt: status != TaskStatus.done,
-      comments: [...task.comments, ...notes],
-    ));
-    AppOverlay.showSuccess(assignee != task.assignee
-        ? LocaleKeys.tasks_toastReassigned
-            .tr(namedArgs: {'name': Validators.firstName(assignee)})
-        : LocaleKeys.tasks_toastSaved.tr());
+    if (task == null) return false;
+    final regress = status.index < task.status.index;
+    try {
+      _put(await _repo.update(id, {
+        if (status != task.status) 'status': status.name,
+        if (status != task.status && regress)
+          'comment': LocaleKeys.tasks_statusChangedComment.tr(),
+        'assignee_id': assigneeId,
+        'priority': priority.name,
+        'due_date': JsonReader.formatDate(due),
+        'estimate_hours': estimate,
+      }));
+      AppOverlay.showSuccess(assigneeId != task.assigneeId
+          ? LocaleKeys.tasks_toastReassigned
+              .tr(namedArgs: {'name': Validators.firstName(assigneeName)})
+          : LocaleKeys.tasks_toastSaved.tr());
+      return true;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return false;
+    }
   }
 
-  Future<void> addComment(String id, String text) async {
+  Future<void> addComment(int id, String text) async {
     final task = byId(id);
     if (task == null) return;
-    await _put(task.copyWith(comments: [
-      ...task.comments,
-      TaskComment(by: me, text: text, at: LocaleKeys.common_now.tr()),
-    ]));
-    final to = task.assignee == me
-        ? LocaleKeys.tasks_projectManager.tr()
-        : Validators.firstName(task.assignee);
-    AppOverlay.showSuccess(
-        LocaleKeys.tasks_toastCommented.tr(namedArgs: {'name': to}));
+    try {
+      final comment = await _repo.addComment(id, text);
+      final latest = byId(id) ?? task;
+      _put(latest.copyWith(comments: [...latest.comments, comment]));
+      final to = task.assigneeId == meId
+          ? LocaleKeys.tasks_projectManager.tr()
+          : Validators.firstName(task.assignee);
+      AppOverlay.showSuccess(
+          LocaleKeys.tasks_toastCommented.tr(namedArgs: {'name': to}));
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+    }
   }
 
-  Future<void> addAttachments(String id, List<TaskAttachment> files) async {
+  Future<void> addAttachments(int id, List<TaskAttachment> files) async {
+    for (final file in files) {
+      final path = file.path;
+      if (path == null) continue;
+      try {
+        final uploaded = await _repo.upload(id, path);
+        final latest = byId(id);
+        if (latest != null) {
+          _put(latest.copyWith(attachments: [...latest.attachments, uploaded]));
+        }
+      } catch (e) {
+        AppOverlay.showError(NetworkException.from(e).message);
+      }
+    }
+  }
+
+  Future<void> removeAttachment(int id, int index) async {
     final task = byId(id);
-    if (task == null || files.isEmpty) return;
-    await _put(task.copyWith(attachments: [...task.attachments, ...files]));
+    if (task == null || index >= task.attachments.length) return;
+    final attachment = task.attachments[index];
+    try {
+      await _repo.removeAttachment(id, attachment.id);
+      final latest = byId(id) ?? task;
+      _put(latest.copyWith(
+          attachments:
+              latest.attachments.where((a) => a.id != attachment.id).toList()));
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+    }
   }
 
-  Future<void> removeAttachment(String id, int index) async {
-    final task = byId(id);
-    if (task == null) return;
-    await _put(
-        task.copyWith(attachments: [...task.attachments]..removeAt(index)));
-  }
-
-  Future<void> create({
-    required String projectId,
+  Future<bool> create({
+    required int projectId,
     required String title,
     required String description,
-    required String assignee,
+    required int assigneeId,
+    required String assigneeName,
     required TaskPriority priority,
     required DateTime due,
     required double estimate,
     required List<TaskAttachment> attachments,
   }) async {
-    final task = TaskModel(
-      id: _repo.nextId(),
-      projectId: projectId,
-      title: title,
-      description: description,
-      assignee: assignee,
-      status: TaskStatus.todo,
-      priority: priority,
-      due: due,
-      estimate: estimate,
-      attachments: attachments,
-    );
-    await _repo.save(task);
-    emit(TasksSuccess([task, ...tasks]));
-    AppOverlay.showSuccess(LocaleKeys.tasks_toastCreated
-        .tr(namedArgs: {'name': Validators.firstName(assignee)}));
+    try {
+      final task = await _repo.create({
+        'project_id': projectId,
+        'title': title,
+        if (description.isNotEmpty) 'description': description,
+        'assignee_id': assigneeId,
+        'priority': priority.name,
+        'due_date': JsonReader.formatDate(due),
+        'estimate_hours': estimate,
+      }, [
+        for (final a in attachments)
+          if (a.path != null) a.path!,
+      ]);
+      _put(task);
+      AppOverlay.showSuccess(LocaleKeys.tasks_toastCreated
+          .tr(namedArgs: {'name': Validators.firstName(assigneeName)}));
+      return true;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return false;
+    }
   }
 
-  Future<void> delete(String id) async {
-    await _repo.delete(id);
-    emit(TasksSuccess(tasks.where((t) => t.id != id).toList()));
-    AppOverlay.showSuccess(LocaleKeys.tasks_toastDeleted.tr());
+  Future<bool> delete(int id) async {
+    try {
+      await _repo.delete(id);
+      emit(TasksSuccess(tasks.where((t) => t.id != id).toList(),
+          counts: counts, version: ++_version));
+      AppOverlay.showSuccess(LocaleKeys.tasks_toastDeleted.tr());
+      return true;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return false;
+    }
   }
 }

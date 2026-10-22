@@ -1,219 +1,80 @@
-import '../../../core/utils/app_constants.dart';
+import '../../../core/network/api_endpoints.dart';
+import '../../../core/network/api_handler.dart';
+import '../../../core/network/dio_client.dart';
+import '../../../core/utils/json_reader.dart';
 import 'models/employee_report.dart';
 
-class ReportsRepo {
-  static const _rows = <(
-    String,
-    String,
-    int,
-    int,
-    double,
-    int,
-    int,
-    int,
-    int,
-    int,
-    int,
-    int,
-    int,
-    int,
-    int
-  )>[
-    (
-      'أحمد محمد',
-      'Flutter Developer',
-      20,
-      20,
-      168.4,
-      1,
-      8,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      35
-    ),
-    ('سارة علي', 'QA Tester', 18, 20, 149.2, 6, 214, 2, 55, 0, 1, 0, 2, 0, 0),
-    (
-      'محمود حسن',
-      'Backend (Laravel)',
-      19,
-      20,
-      171.1,
-      2,
-      25,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      2,
-      110
-    ),
-    (
-      'منة الله سمير',
-      'UI/UX Designer',
-      20,
-      20,
-      176.8,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ),
-    (
-      'يوسف خالد',
-      'Project Manager',
-      20,
-      20,
-      165.3,
-      1,
-      12,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      15
-    ),
-    (
-      'كريم عادل',
-      'Android Developer',
-      16,
-      20,
-      128.5,
-      7,
-      265,
-      3,
-      90,
-      1,
-      2,
-      2,
-      2,
-      2,
-      40
-    ),
-    (
-      'نورهان طارق',
-      'Automation Tester',
-      18,
-      20,
-      158.0,
-      4,
-      160,
-      1,
-      20,
-      0,
-      1,
-      0,
-      2,
-      0,
-      0
-    ),
-    (
-      'عمر فاروق',
-      'Full Stack Developer',
-      20,
-      20,
-      162.7,
-      2,
-      30,
-      1,
-      40,
-      0,
-      0,
-      0,
-      0,
-      1,
-      20
-    ),
-    ('هبة مصطفى', 'Scrum Master', 17, 20, 140.2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0),
-    (
-      'مصطفى جمال',
-      'iOS Developer',
-      20,
-      20,
-      170.4,
-      3,
-      41,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ),
-    (
-      'آية إبراهيم',
-      'Frontend (Vue)',
-      19,
-      20,
-      172.9,
-      1,
-      6,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      1,
-      5
-    ),
-    (
-      'خالد وليد',
-      'DevOps Engineer',
-      17,
-      20,
-      139.6,
-      5,
-      190,
-      2,
-      70,
-      2,
-      1,
-      1,
-      2,
-      3,
-      95
-    ),
-  ];
+class CloseCheck {
+  const CloseCheck({
+    required this.allReviewed,
+    required this.done,
+    required this.total,
+    required this.noPendingFixes,
+    required this.noOpenDays,
+    required this.canClose,
+  });
 
-  Future<List<EmployeeReport>> getMonthReports() async {
-    await Future.delayed(AppConstants.mockLatency);
-    return [
-      for (final r in _rows)
-        EmployeeReport(
-          name: r.$1,
-          jobTitle: r.$2,
-          days: r.$3,
-          workDays: r.$4,
-          hours: r.$5,
-          lateCount: r.$6,
-          lateMinutes: r.$7,
-          deficitDays: r.$8,
-          deficitMinutes: r.$9,
-          locationViolations: r.$10,
-          lateViolations: r.$11,
-          absences: r.$12,
-          leaves: r.$13,
-          pauses: r.$14,
-          pauseMinutes: r.$15,
-        ),
-    ];
-  }
+  final bool allReviewed;
+  final int done;
+  final int total;
+  final bool noPendingFixes;
+  final bool noOpenDays;
+  final bool canClose;
+}
+
+class ReportsRepo with ApiHandler {
+  ReportsRepo({required DioClient dio}) : _dio = dio;
+
+  final DioClient _dio;
+
+  Future<ReportBoard> board({
+    required String month,
+    required ReportMode mode,
+    required bool sortDesc,
+  }) =>
+      guard(() async {
+        final data = dataOf(
+            await _dio.get(ApiEndpoints.monthlyReports, queryParameters: {
+          'month': month,
+          'mode': mode.key,
+          'sort': sortDesc ? 'desc' : 'asc',
+        }));
+        return ReportBoard.fromJson(data, mode);
+      });
+
+  Future<EmployeeReportDetail> detail(int userId, String month) =>
+      guard(() async {
+        final data = dataOf(await _dio.get(ApiEndpoints.monthlyReport(userId),
+            queryParameters: {'month': month}));
+        return EmployeeReportDetail.fromJson(JsonReader.map(data['report']));
+      });
+
+  Future<void> setReviewed(String month, int userId, bool reviewed) =>
+      guard(() => reviewed
+          ? _dio.put(ApiEndpoints.review(month, userId))
+          : _dio.delete(ApiEndpoints.review(month, userId)));
+
+  Future<void> reviewAll(String month) =>
+      guard(() => _dio.post(ApiEndpoints.reviewAll(month)));
+
+  Future<CloseCheck> closeCheck(String month) => guard(() async {
+        final data = dataOf(await _dio.get(ApiEndpoints.closeCheck(month)));
+        final all = JsonReader.map(data['all_reviewed']);
+        return CloseCheck(
+          allReviewed: JsonReader.toBool(all['ok']),
+          done: JsonReader.toInt(all['done']),
+          total: JsonReader.toInt(all['total']),
+          noPendingFixes:
+              JsonReader.toBool(JsonReader.map(data['no_pending_fixes'])['ok']),
+          noOpenDays:
+              JsonReader.toBool(JsonReader.map(data['no_open_days'])['ok']),
+          canClose: JsonReader.toBool(data['can_close']),
+        );
+      });
+
+  Future<void> close(String month) =>
+      guard(() => _dio.post(ApiEndpoints.closeMonth(month)));
+
+  Future<void> reopen(String month, String reason) => guard(() =>
+      _dio.post(ApiEndpoints.reopenMonth(month), data: {'reason': reason}));
 }

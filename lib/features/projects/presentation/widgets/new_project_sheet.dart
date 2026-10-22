@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/router/routes.dart';
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_pickers.dart';
 import '../../../../core/utils/date_helper.dart';
@@ -15,6 +15,7 @@ import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/choice_chips.dart';
 import '../../../../core/widgets/field_label.dart';
 import '../../../../core/widgets/select_field.dart';
+import '../../../team/data/models/employee_model.dart';
 import '../../../team/logic/team_cubit.dart';
 import '../../logic/projects_cubit.dart';
 
@@ -33,12 +34,15 @@ class _NewProjectSheetState extends State<NewProjectSheet> {
   final _company = TextEditingController();
   final _phone = TextEditingController();
   final _value = TextEditingController();
-  late final List<String> _managers = getIt<TeamCubit>()
-      .employees
-      .where((e) => e.isManagerTitle)
-      .map((e) => e.name)
-      .toList();
-  late String _manager = _managers.isNotEmpty ? _managers.first : '';
+  late final List<EmployeeModel> _managers = _pickManagers();
+  late int? _managerId = _managers.firstOrNull?.id;
+
+  List<EmployeeModel> _pickManagers() {
+    final employees = context.read<TeamCubit>().employees;
+    final titled = employees.where((e) => e.isManagerTitle).toList();
+    return titled.isEmpty ? employees : titled;
+  }
+
   String _currency = 'ج.م';
   DateTime _start = DateHelper.today();
   DateTime _due = DateHelper.fromToday(60);
@@ -56,20 +60,21 @@ class _NewProjectSheetState extends State<NewProjectSheet> {
 
   Future<void> _create() async {
     setState(() => _loading = true);
-    final id = await getIt<ProjectsCubit>().create(
-      name: _name.text.trim(),
-      kind: _kind.text.trim(),
-      description: _desc.text.trim(),
-      clientName: _client.text.trim(),
-      company: _company.text.trim(),
-      phone: _phone.text.trim(),
-      manager: _manager,
-      value: double.tryParse(_value.text) ?? 0,
-      currency: _currency,
-      start: _start,
-      due: _due,
-    );
+    final id = await context.read<ProjectsCubit>().create(
+          name: _name.text.trim(),
+          kind: _kind.text.trim(),
+          description: _desc.text.trim(),
+          clientName: _client.text.trim(),
+          company: _company.text.trim(),
+          phone: _phone.text.trim(),
+          managerId: _managerId,
+          value: double.tryParse(_value.text) ?? 0,
+          currency: _currency,
+          start: _start,
+          due: _due,
+        );
     if (!mounted) return;
+    if (id == null) return setState(() => _loading = false);
     final navigator = Navigator.of(context);
     navigator.pop();
     navigator.pushNamed(Routes.projectDetailsScreen,
@@ -165,10 +170,10 @@ class _NewProjectSheetState extends State<NewProjectSheet> {
         _section(LocaleKeys.projects_teamSection.tr()),
         LabeledField(
           label: LocaleKeys.projects_manager.tr(),
-          child: ChoiceChipsPicker<String>(
-            items: [for (final m in _managers) ChoiceItem(m, m)],
-            isSelected: (m) => m == _manager,
-            onTap: (m) => setState(() => _manager = m),
+          child: ChoiceChipsPicker<int>(
+            items: [for (final m in _managers) ChoiceItem(m.id, m.name)],
+            isSelected: (m) => m == _managerId,
+            onTap: (m) => setState(() => _managerId = m),
           ),
         ),
         Row(
@@ -214,7 +219,7 @@ class _NewProjectSheetState extends State<NewProjectSheet> {
         ),
         CustomButton(
           title: LocaleKeys.projects_create.tr(),
-          enabled: _name.text.trim().length >= 2 && _manager.isNotEmpty,
+          enabled: _name.text.trim().length >= 2 && _managerId != null,
           loading: _loading,
           onTap: _create,
         ),

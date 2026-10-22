@@ -2,7 +2,7 @@ import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text.dart';
@@ -40,17 +40,17 @@ class _EditClientSheetState extends State<EditClientSheet> {
       c.text.trim().isEmpty ? fallback : c.text.trim();
 
   Future<void> _save() async {
-    await getIt<ProjectsCubit>().updateClient(
-      widget.project.id,
-      ClientInfo(
-        name: _or(_name, _c.name),
-        company: _or(_company, _c.company),
-        phone: _or(_phone, _c.phone),
-        email: _or(_email, _c.email),
-        city: _or(_city, _c.city),
-      ),
-    );
-    if (mounted) Navigator.of(context).pop();
+    final ok = await context.read<ProjectsCubit>().updateClient(
+          widget.project.id,
+          ClientInfo(
+            name: _or(_name, _c.name),
+            company: _or(_company, _c.company),
+            phone: _or(_phone, _c.phone),
+            email: _or(_email, _c.email),
+            city: _or(_city, _c.city),
+          ),
+        );
+    if (ok && mounted) Navigator.of(context).pop();
   }
 
   Widget _field(String label, TextEditingController c, {bool ltr = false}) =>

@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../core/di/injection.dart';
 import '../../../core/utils/app_colors.dart';
 import '../../../core/utils/locale_keys.dart';
-import '../../../core/widgets/app_empty.dart';
+import '../../../core/widgets/pagination_widgets/pagination_list.dart';
 import '../../../core/widgets/app_fab.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/page_top_bar.dart';
@@ -26,8 +25,14 @@ class ProjectsScreen extends StatefulWidget {
 }
 
 class _ProjectsScreenState extends State<ProjectsScreen> {
-  final _cubit = getIt<ProjectsCubit>()..load();
+  late final ProjectsCubit _cubit = context.read<ProjectsCubit>();
   ProjectStatus? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit.load();
+  }
 
   String _label(ProjectStatus s) => switch (s) {
         ProjectStatus.active => LocaleKeys.projects_filterActive.tr(),
@@ -37,17 +42,21 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = getIt<TasksCubit>().isAdmin;
+    final isAdmin = context.read<TasksCubit>().isAdmin;
     return Scaffold(
       backgroundColor: AppColors.backgroundColor.themeColor,
       body: BlocBuilder<ProjectsCubit, ProjectsState>(
-        bloc: _cubit,
         builder: (context, state) {
           final all = _cubit.projects;
           final list =
               all.where((p) => _status == null || p.status == _status).toList();
           return CustomScreenStateLayout(
             isLoading: state is ProjectsInitial || state is ProjectsLoading,
+            error: state is ProjectsError
+                ? ErrorModel(
+                    code: ErrorEnum.otherError, errorMessage: state.message)
+                : null,
+            onRetry: _cubit.refresh,
             builder: (_) => Stack(
               children: [
                 Column(
@@ -71,17 +80,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       onChanged: (s) => setState(() => _status = s),
                     ),
                     Expanded(
-                      child: list.isEmpty
-                          ? AppEmpty(message: LocaleKeys.projects_empty.tr())
-                          : ListView.separated(
-                              padding:
-                                  EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 100.h),
-                              itemCount: list.length,
-                              separatorBuilder: (_, __) =>
-                                  SizedBox(height: 10.h),
-                              itemBuilder: (_, i) =>
-                                  ProjectCard(project: list[i], index: i),
-                            ),
+                      child: CustomPaginationListView<ProjectModel>(
+                        itemCount: list.length,
+                        onRefresh: _cubit.refresh,
+                        emptyMessage: LocaleKeys.projects_empty.tr(),
+                        padding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 100.h),
+                        builder: (_, i) =>
+                            ProjectCard(project: list[i], index: i),
+                      ),
                     ),
                   ],
                 ),

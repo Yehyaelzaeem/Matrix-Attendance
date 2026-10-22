@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../core/di/injection.dart';
 import '../../../core/models/day_type.dart';
 import '../../../core/utils/app_colors.dart';
 import '../../../core/utils/date_helper.dart';
@@ -31,9 +30,8 @@ class ProfileScreen extends StatelessWidget {
     return ColoredBox(
       color: AppColors.backgroundColor.themeColor,
       child: BlocBuilder<AttendanceCubit, AttendanceState>(
-        bloc: getIt<AttendanceCubit>(),
         builder: (context, state) {
-          final overview = getIt<AttendanceCubit>().overview;
+          final overview = state is AttendanceSuccess ? state.overview : null;
           return SingleChildScrollView(
             child: HeaderOverlapLayout(
               overlap: 44,

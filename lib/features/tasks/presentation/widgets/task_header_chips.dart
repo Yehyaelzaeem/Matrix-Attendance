@@ -4,16 +4,16 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/status_chip.dart';
-import '../../../projects/data/models/project_model.dart';
 import '../../data/models/task_enums.dart';
 import '../../data/models/task_model.dart';
 import 'project_dot.dart';
 
 class TaskHeaderChips extends StatelessWidget {
-  const TaskHeaderChips({super.key, required this.task, required this.project});
+  const TaskHeaderChips(
+      {super.key, required this.task, required this.projectColor});
 
   final TaskModel task;
-  final ProjectModel? project;
+  final Color projectColor;
 
   @override
   Widget build(BuildContext context) {
@@ -21,9 +21,8 @@ class TaskHeaderChips extends StatelessWidget {
       spacing: 6.w,
       runSpacing: 6.h,
       children: [
-        if (project != null)
-          StatusChip(
-              label: project!.name, leading: ProjectDot(color: project!.color)),
+        StatusChip(
+            label: task.projectName, leading: ProjectDot(color: projectColor)),
         StatusChip(label: '#${task.id}', numeric: true),
         if (task.isLate)
           StatusChip(

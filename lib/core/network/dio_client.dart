@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
 import '../../app/router/navigation_services.dart';
+import '../../app/session_scope.dart';
 import '../../app/router/routes.dart';
 import '../di/injection.dart';
 import '../storage/local_storage.dart';
@@ -114,6 +115,18 @@ class DioClient {
         onSendProgress: onSendProgress,
       );
 
+  Future<Response<T>> patchForm<T>(
+    String path,
+    FormData formData, {
+    Map<String, dynamic>? queryParameters,
+  }) =>
+      _dio.patch<T>(
+        path,
+        data: formData,
+        queryParameters: queryParameters,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+
   Future<Response<T>> putForm<T>(
     String path,
     FormData formData, {
@@ -146,8 +159,10 @@ class _AuthInterceptor extends Interceptor {
   @override
   Future<void> onError(
       DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401) {
+    final hadSession = err.requestOptions.headers.containsKey('Authorization');
+    if (err.response?.statusCode == 401 && hadSession) {
       await _storage.clearAll();
+      await SessionScope.restart();
       AppOverlay.showError(LocaleKeys.error_unauthorized.tr());
       NavigationService.navigationKey.currentState
           ?.pushNamedAndRemoveUntil(Routes.loginScreen, (_) => false);

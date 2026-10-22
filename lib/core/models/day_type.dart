@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../utils/app_colors.dart';
 import '../utils/app_emojis.dart';
+import '../utils/json_reader.dart';
+import 'enum_value.dart';
 
 enum DayType {
   office(AppEmojis.office, 8, 9, 17),
@@ -44,3 +46,17 @@ const WeeklySchedule kDefaultSchedule = {
   5: DayType.off,
   6: DayType.off,
 };
+
+WeeklySchedule scheduleFromJson(dynamic days) {
+  final schedule = Map<int, DayType>.of(kDefaultSchedule);
+  for (final day in JsonReader.list(days)) {
+    schedule[JsonReader.toInt(day['weekday'])] =
+        DayType.fromName(EnumValue.keyOf(day['type']));
+  }
+  return schedule;
+}
+
+List<Map<String, dynamic>> scheduleToJson(WeeklySchedule schedule) => [
+      for (var i = 0; i < 7; i++)
+        {'weekday': i, 'type': (schedule[i] ?? DayType.off).name},
+    ];

@@ -17,15 +17,24 @@ final class TeamLoading extends TeamState {
 
 final class TeamSuccess extends TeamState {
   final List<EmployeeModel> employees;
-  final List<HolidayModel> holidays;
+  final Paginated<HolidayModel> holidays;
   const TeamSuccess({required this.employees, required this.holidays});
 
-  EmployeeModel? byName(String name) {
+  EmployeeModel? byId(int id) {
     for (final e in employees) {
-      if (e.name == name) return e;
+      if (e.id == id) return e;
     }
     return null;
   }
+
+  TeamSuccess copyWith({
+    List<EmployeeModel>? employees,
+    Paginated<HolidayModel>? holidays,
+  }) =>
+      TeamSuccess(
+        employees: employees ?? this.employees,
+        holidays: holidays ?? this.holidays,
+      );
 
   @override
   List<Object?> get props => [employees, holidays];

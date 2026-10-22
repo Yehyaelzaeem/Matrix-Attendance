@@ -12,26 +12,28 @@ import '../../../../core/widgets/app_text.dart';
 import '../../../../core/widgets/emoji_box.dart';
 import '../../../../core/widgets/meter_bar.dart';
 import '../../../../core/widgets/status_chip.dart';
-import '../../../reports/logic/reports_cubit.dart';
+import '../../../dashboard/data/models/dashboard_models.dart';
 
 class ReviewProgressCard extends StatelessWidget {
   const ReviewProgressCard(
-      {super.key, required this.data, required this.onOpenReports});
+      {super.key, required this.review, required this.onOpenReports});
 
-  final ReportsSuccess data;
+  final MonthReview review;
   final VoidCallback onOpenReports;
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final total = data.reports.length;
-    final reviewed = data.reviewedCount;
-    final pct = total == 0 ? 0 : (reviewed / total * 100).round();
-    final closed = data.currentClosed;
-    final daysLeft = DateTime(now.year, now.month + 1, 0).day - now.day;
+    final total = review.total;
+    final reviewed = review.reviewed;
+    final pct = review.pct;
+    final closed = review.closed;
+    final daysLeft = review.isLastDay
+        ? 0
+        : DateTime(now.year, now.month + 1, 0).day - now.day;
     final checks = [
-      (LocaleKeys.reviewer_checkReports.tr(), data.allReviewed),
-      (LocaleKeys.reviewer_checkFixes.tr(), true),
+      (LocaleKeys.reviewer_checkReports.tr(), review.allReviewed),
+      (LocaleKeys.reviewer_checkFixes.tr(), review.noPendingFixes),
     ];
     return AppCard(
       margin: EdgeInsets.symmetric(horizontal: 18.w),
@@ -53,7 +55,7 @@ class ReviewProgressCard extends StatelessWidget {
                   children: [
                     AppText(
                       LocaleKeys.reviewer_monthReview.tr(namedArgs: {
-                        'month': DateHelper.monthName(now.month)
+                        'month': DateHelper.monthName(review.month.month)
                       }),
                       fontSize: 15.5,
                       fontWeight: FontWeight.w700,

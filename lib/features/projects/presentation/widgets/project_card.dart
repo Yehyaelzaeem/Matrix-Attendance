@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/router/routes.dart';
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/extensions/extensions.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/date_helper.dart';
@@ -28,12 +28,12 @@ class ProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tasks = getIt<TasksCubit>();
-    final me = tasks.me;
+    final tasks = context.watch<TasksCubit>();
+    final me = tasks.meId;
     final progress = ProjectProgress.of(project, tasks.tasks);
     final open =
         tasks.tasks.where((t) => t.projectId == project.id && !t.isDone).length;
-    final diff = DateHelper.dayDiff(project.due);
+    final diff = project.daysToDue;
     final muted = AppColors.textSecondaryColor.themeColor;
     final dueColor = project.delivered != null
         ? AppColors.successColor.themeColor
@@ -47,8 +47,8 @@ class ProjectCard extends StatelessWidget {
             .tr(namedArgs: {'date': DateHelper.dayMonth(project.delivered!)})
         : diff < 0
             ? LocaleKeys.projects_lateDays.tr(namedArgs: {'n': '${diff.abs()}'})
-            : LocaleKeys.projects_dueOn
-                .tr(namedArgs: {'date': DateHelper.dayMonth(project.due)});
+            : LocaleKeys.projects_dueOn.tr(
+                namedArgs: {'date': DateHelper.dayMonthOrNotYet(project.due)});
     final member = project.member(me);
     Widget meta(List<Widget> children) => Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -135,7 +135,7 @@ class ProjectCard extends StatelessWidget {
                 AppText(
                   LocaleKeys.projects_myTasksCount.tr(namedArgs: {
                     'n':
-                        '${tasks.tasks.where((t) => t.projectId == project.id && t.assignee == me && !t.isDone).length}',
+                        '${tasks.tasks.where((t) => t.projectId == project.id && t.assigneeId == me && !t.isDone).length}',
                   }),
                   fontSize: 12,
                   fontWeight: FontWeight.w700,

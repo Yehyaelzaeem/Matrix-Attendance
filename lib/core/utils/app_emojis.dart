@@ -16,6 +16,11 @@ class AppEmojis {
   static const String ballot = '🗳️';
   static const String bell = '🔔';
   static const String phone = '📱';
+  static const String call = '📞';
+  static const String briefcase = '💼';
+  static const String envelope = '✉️';
+  static const String email = '📧';
+  static const String clipboard = '📋';
   static const String back = '↩';
   static const String returned = '↩️';
   static const String pause = '⏸';

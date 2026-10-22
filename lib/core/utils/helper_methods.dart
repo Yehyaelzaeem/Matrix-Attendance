@@ -16,6 +16,20 @@ class HelperMethods {
     }
   }
 
+  static Future<bool> launch(Uri uri) async {
+    try {
+      return await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> shareToWhatsApp(String text) async {
+    final message = Uri.encodeComponent(text);
+    return await launch(Uri.parse('whatsapp://send?text=$message')) ||
+        await launch(Uri.parse('https://wa.me/?text=$message'));
+  }
+
   static Future<void> openLink(String url) async {
     if (!url.startsWith('http')) {
       url = 'https://$url';

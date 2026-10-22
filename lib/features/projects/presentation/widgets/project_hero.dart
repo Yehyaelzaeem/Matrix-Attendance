@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_emojis.dart';
-import '../../../../core/utils/date_helper.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/app_text.dart';
 import '../../../../core/widgets/grid_background.dart';
@@ -25,7 +24,7 @@ class ProjectHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final diff = DateHelper.dayDiff(project.due);
+    final diff = project.daysToDue;
     final delivered = project.delivered != null;
     final stats = [
       ('$progress%', LocaleKeys.projects_statProgress.tr()),

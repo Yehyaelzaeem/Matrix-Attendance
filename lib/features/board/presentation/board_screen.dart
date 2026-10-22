@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../core/di/injection.dart';
 import '../../../core/utils/app_colors.dart';
 import '../../../core/utils/app_pickers.dart';
 import '../../../core/utils/date_helper.dart';
@@ -28,10 +27,16 @@ class BoardScreen extends StatefulWidget {
 }
 
 class _BoardScreenState extends State<BoardScreen> {
-  late final _cubit = getIt<BoardCubit>()..loadDay(0);
+  late final BoardCubit _cubit = context.read<BoardCubit>();
   int _daysAgo = 0;
   BoardStatus? _tab;
   String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit.loadDay(0);
+  }
 
   void _selectDay(int daysAgo) {
     setState(() => _daysAgo = daysAgo);
@@ -64,9 +69,13 @@ class _BoardScreenState extends State<BoardScreen> {
           BoardDateStrip(daysAgo: _daysAgo, onSelect: _selectDay),
           Expanded(
             child: BlocBuilder<BoardCubit, BoardState>(
-              bloc: _cubit,
               builder: (context, state) => CustomScreenStateLayout(
-                isLoading: state is! BoardSuccess,
+                isLoading: state is BoardInitial || state is BoardLoading,
+                error: state is BoardError
+                    ? ErrorModel(
+                        code: ErrorEnum.otherError, errorMessage: state.message)
+                    : null,
+                onRetry: () => _cubit.loadDay(_daysAgo),
                 builder: (_) {
                   final day = (state as BoardSuccess).day;
                   final q = _query.trim().toLowerCase();
@@ -77,12 +86,12 @@ class _BoardScreenState extends State<BoardScreen> {
                               e.name.contains(q) ||
                               e.jobTitle.toLowerCase().contains(q)))
                       .toList();
-                  final past = day.daysAgo > 0;
+                  final summary = day.summary;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SizedBox(height: 14.h),
-                      BoardSummaryRow(day: day),
+                      BoardSummaryRow(summary: summary),
                       Padding(
                         padding:
                             EdgeInsetsDirectional.fromSTEB(20.w, 6.h, 20.w, 0),
@@ -98,35 +107,44 @@ class _BoardScreenState extends State<BoardScreen> {
                               count: day.entries.length),
                           SegmentItem(
                               BoardStatus.present, BoardStatus.present.label,
-                              count: past ? 0 : day.count(BoardStatus.present)),
+                              count: summary.present),
                           SegmentItem(BoardStatus.paused,
                               LocaleKeys.board_tabPaused.tr(),
-                              count: past ? 0 : day.count(BoardStatus.paused)),
+                              count: summary.paused),
                           SegmentItem(BoardStatus.late, BoardStatus.late.label,
-                              count: day.count(BoardStatus.late)),
+                              count: summary.late),
                           SegmentItem(
                               BoardStatus.absent, BoardStatus.absent.label,
-                              count: day.count(BoardStatus.absent)),
+                              count: summary.absent),
                           SegmentItem(BoardStatus.out, BoardStatus.out.label,
-                              count: day.count(BoardStatus.out)),
+                              count: summary.out),
                           SegmentItem(
                               BoardStatus.leave, BoardStatus.leave.label,
-                              count: day.count(BoardStatus.leave)),
+                              count: summary.leave),
                         ],
                         selected: _tab,
                         onChanged: (s) => setState(() => _tab = s),
                       ),
                       Expanded(
                         child: list.isEmpty
-                            ? AppEmpty(message: LocaleKeys.board_empty.tr())
-                            : ListView.separated(
-                                padding:
-                                    EdgeInsets.fromLTRB(20.w, 10.h, 20.w, 20.h),
-                                itemCount: list.length,
-                                separatorBuilder: (_, __) =>
-                                    SizedBox(height: 10.h),
-                                itemBuilder: (_, i) =>
-                                    BoardEmployeeCard(entry: list[i], index: i),
+                            ? AppEmpty(
+                                message: day.isHoliday
+                                    ? LocaleKeys.board_holiday.tr()
+                                    : LocaleKeys.board_empty.tr())
+                            : RefreshIndicator(
+                                onRefresh: () =>
+                                    _cubit.loadDay(_daysAgo, silent: true),
+                                child: ListView.separated(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: EdgeInsets.fromLTRB(
+                                      20.w, 10.h, 20.w, 20.h),
+                                  itemCount: list.length,
+                                  separatorBuilder: (_, __) =>
+                                      SizedBox(height: 10.h),
+                                  itemBuilder: (_, i) => BoardEmployeeCard(
+                                      entry: list[i], index: i),
+                                ),
                               ),
                       ),
                     ],

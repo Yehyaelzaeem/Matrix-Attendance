@@ -1,72 +1,142 @@
+import 'package:dio/dio.dart';
+
 import '../../../core/models/day_type.dart';
-import '../../../core/utils/app_constants.dart';
+import '../../../core/models/paginated.dart';
+import '../../../core/network/api_endpoints.dart';
+import '../../../core/network/api_handler.dart';
+import '../../../core/network/dio_client.dart';
+import '../../../core/utils/json_reader.dart';
 import '../../auth/data/models/user_role.dart';
+import '../../projects/data/models/project_model.dart';
+import '../../tasks/data/models/task_model.dart';
+import 'models/app_settings.dart';
 import 'models/employee_model.dart';
 import 'models/holiday_model.dart';
 
-class TeamRepo {
-  final List<EmployeeModel> _employees = [
-    const EmployeeModel(name: 'أحمد محمد', jobTitle: 'Flutter Developer'),
-    const EmployeeModel(name: 'سارة علي', jobTitle: 'QA Tester'),
-    const EmployeeModel(name: 'محمود حسن', jobTitle: 'Backend (Laravel)'),
-    const EmployeeModel(name: 'منة الله سمير', jobTitle: 'UI/UX Designer'),
-    const EmployeeModel(
-        name: 'يوسف خالد', jobTitle: 'Project Manager', role: UserRole.admin),
-    const EmployeeModel(name: 'كريم عادل', jobTitle: 'Android Developer'),
-    const EmployeeModel(name: 'نورهان طارق', jobTitle: 'Automation Tester'),
-    const EmployeeModel(name: 'عمر فاروق', jobTitle: 'Full Stack Developer'),
-    const EmployeeModel(
-        name: 'هبة مصطفى', jobTitle: 'Scrum Master', role: UserRole.reviewer),
-    const EmployeeModel(name: 'مصطفى جمال', jobTitle: 'iOS Developer'),
-    const EmployeeModel(name: 'آية إبراهيم', jobTitle: 'Frontend (Vue)'),
-    const EmployeeModel(name: 'خالد وليد', jobTitle: 'DevOps Engineer'),
-  ];
+class EmployeeDetail {
+  const EmployeeDetail({
+    required this.employee,
+    required this.metrics,
+    required this.projects,
+    required this.tasks,
+  });
 
-  final List<HolidayModel> _holidays = [
-    HolidayModel(
-        date: DateTime(DateTime.now().year, 10, 6), name: 'عيد القوات المسلحة'),
-    HolidayModel(
-        date: DateTime(DateTime.now().year, 12, 25),
-        name: 'إجازة رأس السنة (عيد الميلاد)'),
-    HolidayModel(
-        date: DateTime(DateTime.now().year + 1, 1, 7),
-        name: 'عيد الميلاد المجيد'),
-  ];
+  final EmployeeModel employee;
+  final EmployeeMetrics metrics;
+  final List<ProjectModel> projects;
+  final List<TaskModel> tasks;
+}
 
-  Future<List<EmployeeModel>> getEmployees() async {
-    await Future.delayed(AppConstants.mockLatency);
-    return List.unmodifiable(_employees);
-  }
+class TeamRepo with ApiHandler {
+  TeamRepo({required DioClient dio}) : _dio = dio;
 
-  Future<List<HolidayModel>> getHolidays() async {
-    await Future.delayed(AppConstants.mockLatency);
-    return List.unmodifiable(_holidays);
-  }
+  final DioClient _dio;
 
-  Future<EmployeeModel> updateEmployee(
-    String name, {
-    UserRole? role,
-    WeeklySchedule? schedule,
-    bool? suspended,
-  }) async {
-    await Future.delayed(AppConstants.mockLatency);
-    final i = _employees.indexWhere((e) => e.name == name);
-    final updated = _employees[i]
-        .copyWith(role: role, schedule: schedule, suspended: suspended);
-    _employees[i] = updated;
-    return updated;
-  }
+  EmployeeModel _user(Response response) =>
+      EmployeeModel.fromJson(JsonReader.map(dataOf(response)['user']));
 
-  Future<EmployeeModel> addEmployee(EmployeeModel employee) async {
-    await Future.delayed(AppConstants.mockLatency);
-    _employees.add(employee);
-    return employee;
-  }
+  Future<List<EmployeeModel>> getEmployees() => guard(() async {
+        final results = await Future.wait([
+          _dio.get(ApiEndpoints.users),
+          _dio.get(ApiEndpoints.adminSchedules),
+        ]);
+        final schedules = <int, WeeklySchedule>{
+          for (final row in JsonReader.list(dataOf(results[1])['users']))
+            JsonReader.toInt(JsonReader.map(row['user'])['id']):
+                scheduleFromJson(row['days']),
+        };
+        return [
+          for (final json in JsonReader.list(dataOf(results[0])['users']))
+            EmployeeModel.fromJson(json,
+                schedule: schedules[JsonReader.toInt(json['id'])]),
+        ];
+      });
 
-  Future<HolidayModel> addHoliday(DateTime date, String name) async {
-    await Future.delayed(AppConstants.mockLatency);
-    final holiday = HolidayModel(date: date, name: name);
-    _holidays.add(holiday);
-    return holiday;
-  }
+  Future<Paginated<EmployeeModel>> searchEmployees(
+          {String search = '', int page = 1}) =>
+      guard(() async {
+        final data =
+            dataOf(await _dio.get(ApiEndpoints.users, queryParameters: {
+          'page': page,
+          if (search.trim().isNotEmpty) 'search': search.trim(),
+        }));
+        return Paginated.fromData(data, 'users', EmployeeModel.fromJson);
+      });
+
+  Future<EmployeeDetail> getEmployee(int id) => guard(() async {
+        final user = JsonReader.map(
+            dataOf(await _dio.get(ApiEndpoints.user(id)))['user']);
+        final metrics = JsonReader.map(user['metrics']);
+        return EmployeeDetail(
+          employee: EmployeeModel.fromJson(user),
+          metrics: EmployeeMetrics(
+            attendance: JsonReader.intOrNull(metrics['attendance']),
+            kpi: JsonReader.intOrNull(metrics['tasks_kpi']),
+            overall: JsonReader.intOrNull(metrics['overall_rating']),
+          ),
+          projects: JsonReader.list(user['projects'])
+              .map(ProjectModel.fromJson)
+              .toList(),
+          tasks:
+              JsonReader.list(user['tasks']).map(TaskModel.fromJson).toList(),
+        );
+      });
+
+  Future<EmployeeModel> create({
+    required String name,
+    required String phone,
+    required String email,
+    required UserRole role,
+    required int jobNameId,
+  }) =>
+      guard(() async => _user(await _dio.post(ApiEndpoints.users, data: {
+            'name': name,
+            'phone': phone,
+            'email': email.isEmpty ? null : email,
+            'role': role.name,
+            'job_name_id': jobNameId,
+          })));
+
+  Future<EmployeeModel> updateRole(EmployeeModel employee, UserRole role) =>
+      guard(() async =>
+          _user(await _dio.put(ApiEndpoints.user(employee.id), data: {
+            'name': employee.name,
+            'phone': employee.phone,
+            'email': employee.email.isEmpty ? null : employee.email,
+            'role': role.name,
+            'job_name_id': employee.jobNameId,
+            'org_title_ar': employee.orgTitle,
+          })));
+
+  Future<EmployeeModel> suspend(int id) =>
+      guard(() async => _user(await _dio.post(ApiEndpoints.suspendUser(id))));
+
+  Future<EmployeeModel> activate(int id) =>
+      guard(() async => _user(await _dio.post(ApiEndpoints.activateUser(id))));
+
+  Future<void> resetDevice(int id) =>
+      guard(() => _dio.post(ApiEndpoints.resetUserDevice(id)));
+
+  Future<WeeklySchedule> updateSchedule(int id, WeeklySchedule schedule) =>
+      guard(() async => scheduleFromJson(dataOf(await _dio.put(
+          ApiEndpoints.userSchedule(id),
+          data: {'days': scheduleToJson(schedule)}))['days']));
+
+  Future<AppSettings> getSettings() =>
+      guard(() async => AppSettings.fromJson(JsonReader.map(
+          dataOf(await _dio.get(ApiEndpoints.settings))['settings'])));
+
+  Future<Paginated<HolidayModel>> getHolidays({int page = 1}) =>
+      guard(() async {
+        final data = dataOf(await _dio
+            .get(ApiEndpoints.holidays, queryParameters: {'page': page}));
+        return Paginated.fromData(data, 'holidays', HolidayModel.fromJson);
+      });
+
+  Future<HolidayModel> addHoliday(DateTime date, String name) =>
+      guard(() async => HolidayModel.fromJson(JsonReader.map(
+              dataOf(await _dio.post(ApiEndpoints.holidays, data: {
+            'date': JsonReader.formatDate(date),
+            'name_ar': name,
+          }))['holiday'])));
 }

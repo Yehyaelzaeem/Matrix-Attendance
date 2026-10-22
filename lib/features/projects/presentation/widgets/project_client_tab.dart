@@ -2,7 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/date_helper.dart';
 import '../../../../core/utils/locale_keys.dart';
@@ -22,11 +22,10 @@ class ProjectClientTab extends StatelessWidget {
 
   final ProjectModel project;
 
-  Future<void> _upload() async {
+  Future<void> _upload(ProjectsCubit cubit) async {
     final result = await MediaPicker.pickMedia();
     if (result.files.isEmpty) return;
-    await getIt<ProjectsCubit>()
-        .setContractFile(project.id, result.files.first.name);
+    await cubit.uploadContract(project.id, result.files.first.path);
   }
 
   @override
@@ -79,7 +78,7 @@ class ProjectClientTab extends StatelessWidget {
                   numeric: true),
               KeyValueRow(
                   label: LocaleKeys.projects_contractSigned.tr(),
-                  value: DateHelper.dayMonth(k.signedAt)),
+                  value: DateHelper.dayMonthOrNotYet(k.signedAt)),
               KeyValueRow(
                   label: LocaleKeys.projects_contractDuration.tr(),
                   value: LocaleKeys.projects_monthsCount
@@ -95,7 +94,9 @@ class ProjectClientTab extends StatelessWidget {
                     value: k.notes,
                     showDivider: false),
               SizedBox(height: 12.h),
-              ContractFileTile(fileName: k.fileName, onTap: _upload),
+              ContractFileTile(
+                  fileName: k.fileName,
+                  onTap: () => _upload(context.read<ProjectsCubit>())),
             ],
           ),
         ),

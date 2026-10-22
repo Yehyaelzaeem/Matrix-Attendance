@@ -16,10 +16,14 @@ final class DecisionsLoading extends DecisionsState {
 }
 
 final class DecisionsSuccess extends DecisionsState {
-  final List<DecisionModel> decisions;
-  const DecisionsSuccess(this.decisions);
+  final Paginated<DecisionModel> page;
+  final int unread;
 
-  int get unreadCount => decisions.where((d) => d.needsAction).length;
+  const DecisionsSuccess(this.page, {this.unread = 0});
+
+  List<DecisionModel> get decisions => page.items;
+
+  int get unreadCount => unread;
 
   DecisionModel? get pinned {
     for (final d in decisions) {
@@ -28,8 +32,11 @@ final class DecisionsSuccess extends DecisionsState {
     return null;
   }
 
+  DecisionsSuccess copyWith({Paginated<DecisionModel>? page, int? unread}) =>
+      DecisionsSuccess(page ?? this.page, unread: unread ?? this.unread);
+
   @override
-  List<Object?> get props => [decisions];
+  List<Object?> get props => [page, unread];
 }
 
 final class DecisionsError extends DecisionsState {

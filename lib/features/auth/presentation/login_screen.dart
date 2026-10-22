@@ -16,7 +16,6 @@ import 'widgets/auth_badge_header.dart';
 import 'widgets/auth_eyebrow.dart';
 import 'widgets/auth_note.dart';
 import 'widgets/phone_input_field.dart';
-import 'widgets/text_divider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -68,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   BlocConsumer<AuthCubit, AuthState>(
-                    listenWhen: (_, s) => s is AuthOtpSent && !s.isRegister,
+                    listenWhen: (_, s) => s is AuthOtpSent,
                     listener: (context, _) =>
                         context.pushNamed(Routes.otpScreen),
                     builder: (context, state) => CustomButton(
@@ -81,13 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           .sendLoginOtp(_phone.text.trim()),
                     ),
                   ),
-                  TextDivider(LocaleKeys.auth_newEmployee.tr()),
-                  CustomButton(
-                    title: LocaleKeys.auth_createAccount.tr(),
-                    type: ButtonStyleType.ghost,
-                    onTap: () => context.pushNamed(Routes.registerScreen),
-                  ),
-                  AuthNote(LocaleKeys.auth_activationNote.tr()),
+                  AuthNote(LocaleKeys.auth_adminOnlyNote.tr()),
                 ],
               ),
             ),

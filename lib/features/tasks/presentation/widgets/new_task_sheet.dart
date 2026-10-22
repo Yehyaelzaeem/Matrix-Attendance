@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_overlay.dart';
 import '../../../../core/utils/app_pickers.dart';
@@ -26,7 +26,7 @@ import 'attachments_field.dart';
 class NewTaskSheet extends StatefulWidget {
   const NewTaskSheet({super.key, this.projectId});
 
-  final String? projectId;
+  final int? projectId;
 
   @override
   State<NewTaskSheet> createState() => _NewTaskSheetState();
@@ -36,20 +36,22 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
   final _title = TextEditingController();
   final _details = TextEditingController();
   final _estimate = TextEditingController(text: '4');
-  late String? _projectId = widget.projectId;
-  String? _assignee;
+  late int? _projectId = widget.projectId;
+  TeamMember? _assignee;
   TaskPriority _priority = TaskPriority.med;
   DateTime _due = DateHelper.fromToday(3);
   final List<TaskAttachment> _files = [];
   bool _loading = false;
 
-  List<ProjectModel> get _projects => getIt<ProjectsCubit>()
+  List<ProjectModel> get _projects => context
+      .read<ProjectsCubit>()
       .projects
       .where((p) => p.status != ProjectStatus.delivered)
       .toList();
 
-  ProjectModel? get _project =>
-      _projectId == null ? null : getIt<ProjectsCubit>().byId(_projectId!);
+  ProjectModel? get _project => _projectId == null
+      ? null
+      : context.read<ProjectsCubit>().byId(_projectId!);
 
   @override
   void initState() {
@@ -66,11 +68,11 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
   }
 
   void _syncAssignee() {
-    final team = _project?.team ?? const [];
+    final team = _project?.people ?? const <TeamMember>[];
     if (team.isEmpty) {
       _assignee = null;
-    } else if (!team.any((m) => m.name == _assignee)) {
-      _assignee = team.length > 1 ? team[1].name : team.first.name;
+    } else if (!team.any((m) => m.userId == _assignee?.userId)) {
+      _assignee = team.length > 1 ? team[1] : team.first;
     }
   }
 
@@ -85,22 +87,25 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
       return;
     }
     setState(() => _loading = true);
-    await getIt<TasksCubit>().create(
-      projectId: _projectId!,
-      title: _title.text.trim(),
-      description: _details.text.trim(),
-      assignee: _assignee!,
-      priority: _priority,
-      due: _due,
-      estimate: double.tryParse(_estimate.text) ?? 4,
-      attachments: List.of(_files),
-    );
-    if (mounted) Navigator.of(context).pop();
+    final ok = await context.read<TasksCubit>().create(
+          projectId: _projectId!,
+          title: _title.text.trim(),
+          description: _details.text.trim(),
+          assigneeId: _assignee!.userId,
+          assigneeName: _assignee!.name,
+          priority: _priority,
+          due: _due,
+          estimate: double.tryParse(_estimate.text) ?? 4,
+          attachments: List.of(_files),
+        );
+    if (!mounted) return;
+    if (ok) return Navigator.of(context).pop();
+    setState(() => _loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final team = _project?.team ?? const <TeamMember>[];
+    final team = _project?.people ?? const <TeamMember>[];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -126,7 +131,7 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
         ),
         LabeledField(
           label: LocaleKeys.tasks_project.tr(),
-          child: ChoiceChipsPicker<String>(
+          child: ChoiceChipsPicker<int>(
             items: [for (final p in _projects) ChoiceItem(p.id, p.name)],
             isSelected: (id) => id == _projectId,
             onTap: (id) => setState(() {
@@ -141,13 +146,14 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
               ? AppText(LocaleKeys.tasks_chooseProjectFirst.tr(),
                   fontSize: 11.5,
                   color: AppColors.textSecondaryColor.themeColor)
-              : ChoiceChipsPicker<String>(
+              : ChoiceChipsPicker<int>(
                   items: [
                     for (final m in team)
-                      ChoiceItem(m.name, Validators.firstName(m.name)),
+                      ChoiceItem(m.userId, Validators.firstName(m.name)),
                   ],
-                  isSelected: (n) => n == _assignee,
-                  onTap: (n) => setState(() => _assignee = n),
+                  isSelected: (id) => id == _assignee?.userId,
+                  onTap: (id) => setState(
+                      () => _assignee = team.firstWhere((m) => m.userId == id)),
                 ),
         ),
         LabeledField(

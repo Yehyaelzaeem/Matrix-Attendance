@@ -37,30 +37,37 @@ class AppAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasImage = imagePath != null && imagePath!.isNotEmpty;
+    final initials = AppText(
+      Validators.initials(name),
+      fontSize: size * 0.34,
+      fontWeight: FontWeight.w800,
+      color: Colors.white,
+    );
+    final radiusValue = BorderRadius.circular((radius ?? size * 0.32).r);
     return Container(
       width: size.r,
       height: size.r,
       alignment: Alignment.center,
+      clipBehavior: hasImage ? Clip.antiAlias : Clip.none,
       decoration: BoxDecoration(
         color: gradient == null ? (color ?? colorFor(name)) : null,
         gradient: gradient,
-        borderRadius: BorderRadius.circular((radius ?? size * 0.32).r),
+        borderRadius: radiusValue,
         border: borderColor != null
             ? Border.all(color: borderColor!, width: borderWidth)
             : null,
-        image: hasImage
-            ? DecorationImage(
-                image: FileImage(File(imagePath!)), fit: BoxFit.cover)
-            : null,
       ),
       child: hasImage
-          ? null
-          : AppText(
-              Validators.initials(name),
-              fontSize: size * 0.34,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
+          ? Image(
+              image: imagePath!.startsWith('http')
+                  ? NetworkImage(imagePath!)
+                  : FileImage(File(imagePath!)) as ImageProvider,
+              width: size.r,
+              height: size.r,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Center(child: initials),
+            )
+          : initials,
     );
   }
 }

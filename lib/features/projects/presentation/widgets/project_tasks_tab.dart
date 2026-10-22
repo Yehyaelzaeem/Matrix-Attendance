@@ -1,7 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/app_empty.dart';
 import '../../../tasks/data/models/task_enums.dart';
@@ -11,16 +11,18 @@ import '../../../tasks/presentation/widgets/task_group_section.dart';
 class ProjectTasksTab extends StatelessWidget {
   const ProjectTasksTab({super.key, required this.projectId});
 
-  final String projectId;
+  final int projectId;
 
   @override
   Widget build(BuildContext context) {
-    final tasks = getIt<TasksCubit>()
+    final tasks = context
+        .watch<TasksCubit>()
         .tasks
         .where((t) => t.projectId == projectId)
         .toList();
-    if (tasks.isEmpty)
+    if (tasks.isEmpty) {
       return AppEmpty(message: LocaleKeys.tasks_emptyProject.tr());
+    }
     const order = [
       TaskStatus.doing,
       TaskStatus.review,
@@ -36,7 +38,7 @@ class ProjectTasksTab extends StatelessWidget {
             title: status.label,
             hideProject: true,
             tasks: tasks.where((t) => t.status == status).toList()
-              ..sort((a, b) => a.due.compareTo(b.due)),
+              ..sort((a, b) => a.dueOrFar.compareTo(b.dueOrFar)),
           ),
       ],
     );

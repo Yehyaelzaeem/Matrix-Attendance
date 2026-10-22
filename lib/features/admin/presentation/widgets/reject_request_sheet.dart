@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/utils/validators.dart';
@@ -14,6 +14,7 @@ import '../../../../core/widgets/field_label.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../requests/data/models/request_model.dart';
 import '../../logic/approvals_cubit.dart';
+import 'requester_role_chip.dart';
 
 class RejectRequestSheet extends StatefulWidget {
   const RejectRequestSheet({super.key, required this.request});
@@ -36,8 +37,10 @@ class _RejectRequestSheetState extends State<RejectRequestSheet> {
 
   Future<void> _confirm() async {
     final navigator = Navigator.of(context);
-    await getIt<ApprovalsCubit>().reject(widget.request, _reason.text.trim());
-    navigator.pop();
+    final ok = await context
+        .read<ApprovalsCubit>()
+        .reject(widget.request, _reason.text.trim());
+    if (ok) navigator.pop();
   }
 
   @override
@@ -51,12 +54,20 @@ class _RejectRequestSheetState extends State<RejectRequestSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppText(
-          LocaleKeys.admin_rejectTitle.tr(namedArgs: {
-            'name': Validators.firstName(widget.request.employee ?? '')
-          }),
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
+        Row(
+          children: [
+            Flexible(
+              child: AppText(
+                LocaleKeys.admin_rejectTitle.tr(namedArgs: {
+                  'name': Validators.firstName(widget.request.employee ?? '')
+                }),
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(width: 6.w),
+            RequesterRoleChip(widget.request.requesterRole),
+          ],
         ),
         SizedBox(height: 4.h),
         AppText('${widget.request.type.label} · ${widget.request.title}',

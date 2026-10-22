@@ -19,7 +19,7 @@ final class ProjectsSuccess extends ProjectsState {
   final List<ProjectModel> projects;
   const ProjectsSuccess(this.projects);
 
-  ProjectModel? byId(String id) {
+  ProjectModel? byId(int id) {
     for (final p in projects) {
       if (p.id == id) return p;
     }

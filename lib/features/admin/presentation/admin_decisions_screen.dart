@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../core/di/injection.dart';
 import '../../../core/utils/app_colors.dart';
 import '../../../core/utils/locale_keys.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/page_top_bar.dart';
+import '../../../core/widgets/pagination_widgets/pagination_list.dart';
 import '../../../core/widgets/screen_state_layout.dart';
+import '../../decisions/data/models/decision_model.dart';
 import '../../decisions/logic/decisions_cubit.dart';
 import '../../decisions/presentation/widgets/admin_decision_card.dart';
 import '../../decisions/presentation/widgets/compose_decision_sheet.dart';
@@ -19,7 +20,7 @@ class AdminDecisionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cubit = getIt<DecisionsCubit>();
+    final cubit = context.read<DecisionsCubit>()..load();
     return ColoredBox(
       color: AppColors.backgroundColor.themeColor,
       child: Column(
@@ -40,17 +41,25 @@ class AdminDecisionsScreen extends StatelessWidget {
           ),
           Expanded(
             child: BlocBuilder<DecisionsCubit, DecisionsState>(
-              bloc: cubit,
               builder: (context, state) => CustomScreenStateLayout(
-                isLoading: state is! DecisionsSuccess,
+                isLoading:
+                    state is DecisionsInitial || state is DecisionsLoading,
+                error: state is DecisionsError
+                    ? ErrorModel(
+                        code: ErrorEnum.otherError, errorMessage: state.message)
+                    : null,
+                onRetry: cubit.refresh,
                 builder: (_) {
-                  final items = (state as DecisionsSuccess).decisions;
-                  return ListView.separated(
+                  final page = (state as DecisionsSuccess).page;
+                  return CustomPaginationListView<DecisionModel>(
+                    itemCount: page.items.length,
+                    hasMorePages: page.hasMore,
+                    isMoreLoading: page.loadingMore,
+                    onLoadMore: cubit.loadMore,
+                    onRefresh: cubit.refresh,
                     padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 24.h),
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) => SizedBox(height: 10.h),
-                    itemBuilder: (_, i) =>
-                        AdminDecisionCard(decision: items[i], index: i),
+                    builder: (_, i) =>
+                        AdminDecisionCard(decision: page.items[i], index: i),
                   );
                 },
               ),

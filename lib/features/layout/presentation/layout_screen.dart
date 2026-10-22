@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/di/injection.dart';
 import '../../../core/utils/app_colors.dart';
 import '../../admin/logic/approvals_cubit.dart';
 import '../../admin/presentation/admin_decisions_screen.dart';
@@ -13,7 +12,9 @@ import '../../attendance/presentation/employee_home_screen.dart';
 import '../../auth/data/models/user_role.dart';
 import '../../auth/logic/auth_cubit.dart';
 import '../../board/presentation/board_screen.dart';
+import '../../catalog/logic/catalog_cubit.dart';
 import '../../decisions/logic/decisions_cubit.dart';
+import '../../notifications/logic/notifications_cubit.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../projects/logic/projects_cubit.dart';
 import '../../reports/logic/reports_cubit.dart';
@@ -40,19 +41,23 @@ class _LayoutScreenState extends State<LayoutScreen> {
   late final UserRole _role =
       context.read<AuthCubit>().currentUser?.role ?? UserRole.employee;
   late final List<AppTab> _tabs = AppTab.forRole(_role);
-  final _layout = getIt<LayoutCubit>();
+  late final LayoutCubit _layout = context.read<LayoutCubit>();
 
   @override
   void initState() {
     super.initState();
     _layout.start(_tabs);
-    getIt<TasksCubit>().load();
-    getIt<ProjectsCubit>().load();
-    getIt<DecisionsCubit>().load();
-    getIt<TeamCubit>().load();
-    getIt<AttendanceCubit>().load();
-    if (_role != UserRole.employee) getIt<ReportsCubit>().load();
-    if (_role == UserRole.admin) getIt<ApprovalsCubit>().load();
+    context.read<CatalogCubit>().load();
+    context.read<TasksCubit>().load();
+    context.read<DecisionsCubit>().load();
+    context.read<NotificationsCubit>().load();
+    context.read<AttendanceCubit>().load();
+    if (_role != UserRole.employee) context.read<ReportsCubit>().load();
+    if (_role != UserRole.reviewer) context.read<ProjectsCubit>().load();
+    if (_role == UserRole.admin) {
+      context.read<TeamCubit>().load();
+      context.read<ApprovalsCubit>().load();
+    }
   }
 
   Widget _screenFor(AppTab tab) => switch (tab) {
@@ -74,7 +79,6 @@ class _LayoutScreenState extends State<LayoutScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<LayoutCubit, AppTab>(
-      bloc: _layout,
       builder: (context, current) => Scaffold(
         backgroundColor: AppColors.backgroundColor.themeColor,
         body: IndexedStack(

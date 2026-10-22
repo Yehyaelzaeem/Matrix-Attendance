@@ -7,50 +7,44 @@ import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/app_text.dart';
 import '../../../../core/widgets/person_row.dart';
 import '../../../../core/widgets/status_chip.dart';
+import '../../../requests/data/models/request_model.dart';
 import '../../../requests/presentation/widgets/reason_box.dart';
-import '../../data/models/approval_models.dart';
 import 'approval_box.dart';
+import 'requester_role_chip.dart';
 
 class ApprovalLogCard extends StatelessWidget {
-  const ApprovalLogCard({super.key, required this.entry, this.index = 0});
+  const ApprovalLogCard({super.key, required this.request, this.index = 0});
 
-  final ApprovalLogEntry entry;
+  final RequestModel request;
   final int index;
 
   @override
   Widget build(BuildContext context) {
-    final (label, tone) = switch (entry.outcome) {
-      LogOutcome.approved => (
-          LocaleKeys.admin_outcomeApproved.tr(),
-          ChipTone.green
-        ),
-      LogOutcome.activated => (
-          LocaleKeys.admin_outcomeActivated.tr(),
-          ChipTone.blue
-        ),
-      LogOutcome.rejected => (
-          LocaleKeys.admin_outcomeRejected.tr(),
-          ChipTone.red
-        ),
-    };
+    final approved = request.status == RequestStatus.approved;
     return ApprovalBox(
       index: index,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           PersonRow(
-            name: entry.name,
-            subtitle: entry.what,
-            trailing: StatusChip(label: label, tone: tone),
+            name: request.employee ?? '',
+            subtitle: '${request.type.label} – ${request.title}',
+            titleBadge: RequesterRoleChip(request.requesterRole),
+            trailing: StatusChip(
+              label: approved
+                  ? LocaleKeys.admin_outcomeApproved.tr()
+                  : LocaleKeys.admin_outcomeRejected.tr(),
+              tone: approved ? ChipTone.green : ChipTone.red,
+            ),
           ),
-          if (entry.reason != null)
+          if (!approved && request.rejectReason != null)
             ReasonBox(
               label: LocaleKeys.requests_rejectLabel.tr(),
-              text: entry.reason!,
+              text: request.rejectReason!,
               danger: true,
             ),
           SizedBox(height: 8.h),
-          AppText(entry.when,
+          AppText(request.decidedWhen,
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondaryColor.themeColor),

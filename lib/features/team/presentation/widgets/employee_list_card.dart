@@ -1,9 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/router/routes.dart';
-import '../../../../core/di/injection.dart';
 import '../../../../core/extensions/extensions.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/locale_keys.dart';
@@ -13,35 +13,30 @@ import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../auth/data/models/user_role.dart';
 import '../../../projects/logic/projects_cubit.dart';
-import '../../../reports/logic/reports_cubit.dart';
-import '../../../tasks/data/models/task_kpi.dart';
-import '../../../tasks/logic/tasks_cubit.dart';
 import '../../data/models/employee_model.dart';
 
 class EmployeeListCard extends StatelessWidget {
-  const EmployeeListCard({super.key, required this.employee, this.index = 0});
+  const EmployeeListCard(
+      {super.key, required this.employee, this.metrics, this.index = 0});
 
   final EmployeeModel employee;
+  final EmployeeMetrics? metrics;
   final int index;
 
   @override
   Widget build(BuildContext context) {
-    final projects = getIt<ProjectsCubit>()
+    final projects = context
+        .watch<ProjectsCubit>()
         .projects
-        .where((p) => p.hasMember(employee.name))
+        .where((p) => p.hasMember(employee.id))
         .length;
-    final report = getIt<ReportsCubit>()
-        .data
-        ?.reports
-        .where((r) => r.name == employee.name)
-        .firstOrNull;
-    final kpi = TaskKpi.of(employee.name, getIt<TasksCubit>().tasks);
+    final dash = LocaleKeys.common_dash.tr();
     final muted = AppColors.textSecondaryColor.themeColor;
     return FadeSlideIn(
       delay: Duration(milliseconds: index * 25),
       child: GestureDetector(
         onTap: () => context.pushNamed(Routes.employeeDetailsScreen,
-            arguments: {'name': employee.name}),
+            arguments: {'id': employee.id}),
         child: Container(
           padding: EdgeInsets.all(13.r),
           decoration: BoxDecoration(
@@ -50,7 +45,7 @@ class EmployeeListCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              AppAvatar(name: employee.name),
+              AppAvatar(name: employee.name, imagePath: employee.image),
               SizedBox(width: 12.w),
               Expanded(
                 child: Column(
@@ -72,7 +67,12 @@ class EmployeeListCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  if (employee.role != UserRole.employee)
+                  if (employee.suspended)
+                    StatusChip(
+                        small: true,
+                        label: LocaleKeys.team_suspendedChip.tr(),
+                        tone: ChipTone.red)
+                  else if (employee.role != UserRole.employee)
                     StatusChip(
                         small: true,
                         label: employee.role.label,
@@ -80,12 +80,10 @@ class EmployeeListCard extends StatelessWidget {
                   SizedBox(height: 5.h),
                   AppText(
                     LocaleKeys.team_scores.tr(namedArgs: {
-                      'a': report == null
-                          ? LocaleKeys.common_dash.tr()
-                          : '${report.attendanceScore}',
-                      'b': kpi.score == null
-                          ? LocaleKeys.common_dash.tr()
-                          : '${kpi.score}%',
+                      'a': metrics?.attendance == null
+                          ? dash
+                          : '${metrics!.attendance}',
+                      'b': metrics?.kpi == null ? dash : '${metrics!.kpi}%',
                     }),
                     numeric: true,
                     fontSize: 11.5,

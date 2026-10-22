@@ -17,9 +17,13 @@ final class TasksLoading extends TasksState {
 
 final class TasksSuccess extends TasksState {
   final List<TaskModel> tasks;
-  const TasksSuccess(this.tasks);
+  final TaskCounts counts;
+  final int version;
 
-  TaskModel? byId(String id) {
+  const TasksSuccess(this.tasks,
+      {this.counts = const TaskCounts(), this.version = 0});
+
+  TaskModel? byId(int id) {
     for (final t in tasks) {
       if (t.id == id) return t;
     }
@@ -27,7 +31,7 @@ final class TasksSuccess extends TasksState {
   }
 
   @override
-  List<Object?> get props => [tasks];
+  List<Object?> get props => [tasks, version];
 }
 
 final class TasksError extends TasksState {

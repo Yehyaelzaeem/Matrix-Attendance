@@ -20,12 +20,13 @@ class EditAdminProfileSheet extends StatefulWidget {
 class _EditAdminProfileSheetState extends State<EditAdminProfileSheet> {
   late final _user = context.read<AuthCubit>().currentUser;
   late final _name = TextEditingController(text: _user?.name);
-  late final _title = TextEditingController(text: _user?.jobTitle);
+  late final _title = TextEditingController(text: _user?.orgTitle);
+  late final _phone = TextEditingController(text: _user?.localPhone);
   late final _email = TextEditingController(text: _user?.email);
 
   @override
   void dispose() {
-    for (final c in [_name, _title, _email]) {
+    for (final c in [_name, _title, _phone, _email]) {
       c.dispose();
     }
     super.dispose();
@@ -36,12 +37,13 @@ class _EditAdminProfileSheetState extends State<EditAdminProfileSheet> {
 
   Future<void> _save() async {
     final navigator = Navigator.of(context);
-    await context.read<AuthCubit>().updateProfile(
+    final saved = await context.read<AuthCubit>().updateProfile(
           name: _or(_name, _user?.name),
-          jobTitle: _or(_title, _user?.jobTitle),
-          email: _or(_email, _user?.email),
+          orgTitle: _or(_title, _user?.orgTitle),
+          phone: _or(_phone, _user?.localPhone),
+          email: _email.text.trim(),
         );
-    navigator.pop();
+    if (saved) navigator.pop();
   }
 
   Widget _field(String label, TextEditingController c, {bool ltr = false}) =>
@@ -65,6 +67,7 @@ class _EditAdminProfileSheetState extends State<EditAdminProfileSheet> {
         SizedBox(height: 14.h),
         _field(LocaleKeys.admin_name.tr(), _name),
         _field(LocaleKeys.admin_title.tr(), _title, ltr: true),
+        _field(LocaleKeys.admin_phone.tr(), _phone, ltr: true),
         _field(LocaleKeys.admin_email.tr(), _email, ltr: true),
         CustomButton(title: LocaleKeys.common_save.tr(), onTap: _save),
       ],

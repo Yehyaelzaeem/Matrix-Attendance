@@ -12,7 +12,7 @@ import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_text.dart';
 import '../logic/auth_cubit.dart';
-import 'widgets/auth_step_bar.dart';
+import 'widgets/otp_header.dart';
 import 'widgets/otp_input.dart';
 import 'widgets/otp_resend_timer.dart';
 
@@ -26,7 +26,6 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   String _code = '';
   late final AuthCubit _cubit = context.read<AuthCubit>();
-  late final bool _isRegister = _cubit.isRegisterFlow;
   late final String _phone =
       _cubit.state is AuthOtpSent ? (_cubit.state as AuthOtpSent).phone : '';
 
@@ -45,15 +44,9 @@ class _OtpScreenState extends State<OtpScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AuthStepBar(
-              label: LocaleKeys.auth_otpStep.tr(),
-              step: 2,
-              total: 2,
-              showStepper: _isRegister,
-              onBack: () => context.pop(),
-            ),
+            OtpHeader(onBack: () => context.pop()),
             Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(24.w, 18.h, 24.w, 30.h),
+              padding: EdgeInsetsDirectional.fromSTEB(24.w, 6.h, 24.w, 30.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -100,15 +93,11 @@ class _OtpScreenState extends State<OtpScreen> {
                         SizedBox(height: 22.h),
                         BlocConsumer<AuthCubit, AuthState>(
                           listenWhen: (_, s) => s is AuthSuccess,
-                          listener: (context, state) {
-                            final user = (state as AuthSuccess).user;
-                            context.pushNamedAndRemoveUntil(
-                              user.isActive
-                                  ? Routes.layoutScreen
-                                  : Routes.pendingScreen,
-                              predicate: (_) => false,
-                            );
-                          },
+                          listener: (context, _) =>
+                              context.pushNamedAndRemoveUntil(
+                            Routes.layoutScreen,
+                            predicate: (_) => false,
+                          ),
                           builder: (context, state) => CustomButton(
                             title: LocaleKeys.auth_verify.tr(),
                             enabled: _code.length == AppConstants.otpLength,

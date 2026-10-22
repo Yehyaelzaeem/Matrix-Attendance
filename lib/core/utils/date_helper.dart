@@ -88,11 +88,32 @@ class DateHelper {
   static String dayMonth(DateTime date) =>
       '${date.day} ${monthName(date.month)}';
 
+  static String dayMonthOrNotYet(DateTime? date) =>
+      date == null ? LocaleKeys.common_notYet.tr() : dayMonth(date);
+
   static String fullDate(DateTime date) =>
       '${dayName(weekIndex(date))}${LocaleKeys.common_dateSeparator.tr()} ${date.day} ${monthName(date.month)} ${date.year}';
 
   static String iso(DateTime date) =>
       '${date.year}-${twoDigits(date.month)}-${twoDigits(date.day)}';
+
+  static String relative(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return LocaleKeys.common_now.tr();
+    if (diff.inHours < 1) {
+      return LocaleKeys.common_minutesAgo
+          .tr(namedArgs: {'n': '${diff.inMinutes}'});
+    }
+    final days = today().difference(dateOnly(date)).inDays;
+    if (days == 0) {
+      return LocaleKeys.common_hoursAgo.tr(namedArgs: {'n': '${diff.inHours}'});
+    }
+    if (days == 1) return LocaleKeys.common_yesterday.tr();
+    if (days < 7) {
+      return LocaleKeys.common_daysAgo.tr(namedArgs: {'n': '$days'});
+    }
+    return dayMonth(date);
+  }
 
   static String time24(DateTime date) =>
       '${twoDigits(date.hour)}:${twoDigits(date.minute)}';

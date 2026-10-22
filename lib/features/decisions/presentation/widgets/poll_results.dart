@@ -42,8 +42,8 @@ class PollResults extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = decision;
     final votes = d.votes;
-    final yes = votes == 0 ? 0 : (d.yes / votes * 100).round();
-    final no = votes == 0 ? 0 : 100 - yes;
+    final yes = d.yesPct;
+    final no = d.noPct;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -74,7 +74,11 @@ class PollResults extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AppAvatar(name: v.name, size: 32, radius: 10),
+                      AppAvatar(
+                          name: v.name,
+                          size: 32,
+                          radius: 10,
+                          imagePath: v.image),
                       SizedBox(width: 10.w),
                       Expanded(
                         child: Column(

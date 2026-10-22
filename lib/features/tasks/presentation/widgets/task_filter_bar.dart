@@ -15,18 +15,21 @@ class TaskFilterBar extends StatelessWidget {
     super.key,
     required this.filter,
     required this.projectName,
+    required this.assigneeName,
     required this.onPick,
     required this.onClear,
   });
 
   final TaskFilter filter;
-  final String Function(String id) projectName;
+  final String Function(int id) projectName;
+  final String Function(int id) assigneeName;
   final ValueChanged<TaskFilterKind> onPick;
   final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
-    final assignee = filter.assignee;
+    final assignee =
+        filter.assigneeId == null ? null : assigneeName(filter.assigneeId!);
     return SizedBox(
       height: 36.h,
       child: ListView(

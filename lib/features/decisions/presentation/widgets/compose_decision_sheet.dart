@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_pickers.dart';
 import '../../../../core/utils/date_helper.dart';
@@ -14,7 +14,7 @@ import '../../../../core/widgets/choice_chips.dart';
 import '../../../../core/widgets/field_label.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
 import '../../../../core/widgets/select_field.dart';
-import '../../../auth/logic/auth_cubit.dart';
+import '../../../catalog/logic/catalog_cubit.dart';
 import '../../data/models/decision_model.dart';
 import '../../logic/decisions_cubit.dart';
 
@@ -29,7 +29,7 @@ class _ComposeDecisionSheetState extends State<ComposeDecisionSheet> {
   final _title = TextEditingController();
   final _body = TextEditingController();
   DecisionKind _kind = DecisionKind.decision;
-  DecisionAudience _audience = DecisionAudience.all;
+  int? _category;
   DateTime _ends = DateHelper.fromToday(3);
   bool _loading = false;
 
@@ -45,14 +45,22 @@ class _ComposeDecisionSheetState extends State<ComposeDecisionSheet> {
 
   Future<void> _publish() async {
     setState(() => _loading = true);
-    await getIt<DecisionsCubit>().publish(
-      kind: _kind,
-      title: _title.text.trim(),
-      body: _body.text.trim(),
-      audience: _audience,
-      by: getIt<AuthCubit>().currentUser?.name ?? '',
-    );
-    if (mounted) Navigator.of(context).pop();
+    final navigator = Navigator.of(context);
+    final ok = await context.read<DecisionsCubit>().publish(
+          kind: _kind,
+          title: _title.text.trim(),
+          body: _body.text.trim(),
+          audience: _category == null
+              ? const DecisionAudience.all()
+              : DecisionAudience.groups([_category!]),
+          endsAt: _kind == DecisionKind.poll ? _ends : null,
+        );
+    if (!mounted) return;
+    if (ok) {
+      navigator.pop();
+    } else {
+      setState(() => _loading = false);
+    }
   }
 
   @override
@@ -98,12 +106,14 @@ class _ComposeDecisionSheetState extends State<ComposeDecisionSheet> {
         ),
         LabeledField(
           label: LocaleKeys.decisions_audience.tr(),
-          child: ChoiceChipsPicker<DecisionAudience>(
+          child: ChoiceChipsPicker<int?>(
             items: [
-              for (final a in DecisionAudience.values) ChoiceItem(a, a.label)
+              ChoiceItem(null, LocaleKeys.decisions_audAll.tr()),
+              for (final c in context.watch<CatalogCubit>().state.categories)
+                ChoiceItem(c.id, c.name),
             ],
-            isSelected: (a) => a == _audience,
-            onTap: (a) => setState(() => _audience = a),
+            isSelected: (id) => id == _category,
+            onTap: (id) => setState(() => _category = id),
           ),
         ),
         if (_kind == DecisionKind.poll)

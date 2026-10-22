@@ -16,19 +16,42 @@ final class ApprovalsLoading extends ApprovalsState {
 }
 
 final class ApprovalsSuccess extends ApprovalsState {
-  final List<RequestModel> requests;
-  final List<NewAccountModel> accounts;
-  final List<ApprovalLogEntry> log;
+  final Paginated<RequestModel> pending;
+  final RoleSummary summary;
+  final Paginated<RequestModel>? log;
+  final bool logLoading;
+  final UserRole? role;
+
   const ApprovalsSuccess({
-    required this.requests,
-    required this.accounts,
-    required this.log,
+    required this.pending,
+    required this.summary,
+    this.log,
+    this.logLoading = false,
+    this.role,
   });
 
-  int get pendingCount => requests.length + accounts.length;
+  List<RequestModel> get requests => pending.items;
+
+  int get pendingCount => pending.total;
+
+  int countFrom(UserRole? role) => summary.of(role);
+
+  ApprovalsSuccess copyWith({
+    Paginated<RequestModel>? pending,
+    RoleSummary? summary,
+    Paginated<RequestModel>? log,
+    bool? logLoading,
+  }) =>
+      ApprovalsSuccess(
+        pending: pending ?? this.pending,
+        summary: summary ?? this.summary,
+        log: log ?? this.log,
+        logLoading: logLoading ?? this.logLoading,
+        role: role,
+      );
 
   @override
-  List<Object?> get props => [requests, accounts, log];
+  List<Object?> get props => [pending, summary, log, logLoading, role];
 }
 
 final class ApprovalsError extends ApprovalsState {

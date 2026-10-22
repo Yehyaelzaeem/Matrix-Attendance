@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/router/routes.dart';
-import '../../../../core/di/injection.dart';
 import '../../../../core/extensions/extensions.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/date_helper.dart';
@@ -66,7 +65,6 @@ class HomeHeader extends StatelessWidget {
               ),
               trailing ??
                   BlocBuilder<DecisionsCubit, DecisionsState>(
-                    bloc: getIt<DecisionsCubit>(),
                     builder: (_, state) => IconSquareButton(
                       icon: Icons.notifications_none_rounded,
                       background: Colors.white.withValues(alpha: 0.14),

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../core/di/injection.dart';
 import '../../../core/utils/app_colors.dart';
 import '../../../core/utils/date_helper.dart';
 import '../../../core/utils/locale_keys.dart';
@@ -15,7 +14,6 @@ import '../../../core/widgets/screen_state_layout.dart';
 import '../../../core/widgets/search_field.dart';
 import '../../../core/widgets/segment_tabs.dart';
 import '../../../core/widgets/stat_tiles.dart';
-import '../../projects/logic/projects_cubit.dart';
 import '../data/models/task_enums.dart';
 import '../data/models/task_filter.dart';
 import '../logic/tasks_cubit.dart';
@@ -29,13 +27,13 @@ class TasksScreen extends StatefulWidget {
     super.key,
     this.isTab = false,
     this.initialStatus,
-    this.initialAssignee,
+    this.initialAssigneeId,
     this.initialDue = DueFilter.all,
   });
 
   final bool isTab;
   final TaskStatus? initialStatus;
-  final String? initialAssignee;
+  final int? initialAssigneeId;
   final DueFilter initialDue;
 
   @override
@@ -43,13 +41,19 @@ class TasksScreen extends StatefulWidget {
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  final _cubit = getIt<TasksCubit>()..load();
+  late final TasksCubit _cubit = context.read<TasksCubit>();
   final _search = TextEditingController();
   late TaskFilter _filter = TaskFilter(
     status: widget.initialStatus,
-    assignee: widget.initialAssignee,
+    assigneeId: widget.initialAssigneeId,
     due: widget.initialDue,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit.load();
+  }
 
   @override
   void dispose() {
@@ -57,11 +61,8 @@ class _TasksScreenState extends State<TasksScreen> {
     super.dispose();
   }
 
-  String _projectName(String id) => getIt<ProjectsCubit>().byId(id)?.name ?? '';
-
-  int _count(TaskFilter f) => _cubit.tasks
-      .where((t) => f.matches(t, projectName: _projectName, ignoreStatus: true))
-      .length;
+  int _count(TaskFilter f) =>
+      _cubit.tasks.where((t) => f.matches(t, ignoreStatus: true)).length;
 
   Future<void> _pick(TaskFilterKind kind) async {
     final picked = await AppSheet.show<TaskFilter>(
@@ -77,12 +78,9 @@ class _TasksScreenState extends State<TasksScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor.themeColor,
       body: BlocBuilder<TasksCubit, TasksState>(
-        bloc: _cubit,
         builder: (context, state) {
           final all = _cubit.tasks;
-          final list = all
-              .where((t) => _filter.matches(t, projectName: _projectName))
-              .toList()
+          final list = all.where(_filter.matches).toList()
             ..sort(TaskFilter.sort);
           final open = all.where((t) => !t.isDone).length;
           final late = all.where((t) => t.isLate).length;
@@ -96,10 +94,15 @@ class _TasksScreenState extends State<TasksScreen> {
           int countStatus(TaskStatus? s) => all
               .where((t) => _filter
                   .copyWith(status: s, clearStatus: s == null)
-                  .matches(t, projectName: _projectName))
+                  .matches(t))
               .length;
           return CustomScreenStateLayout(
             isLoading: state is TasksInitial || state is TasksLoading,
+            error: state is TasksError
+                ? ErrorModel(
+                    code: ErrorEnum.otherError, errorMessage: state.message)
+                : null,
+            onRetry: _cubit.refresh,
             builder: (_) => Stack(
               children: [
                 Column(
@@ -144,7 +147,8 @@ class _TasksScreenState extends State<TasksScreen> {
                     ),
                     TaskFilterBar(
                       filter: _filter,
-                      projectName: _projectName,
+                      projectName: (id) => _cubit.projectNames[id] ?? '',
+                      assigneeName: (id) => _cubit.assignees[id]?.name ?? '',
                       onPick: _pick,
                       onClear: () => setState(() {
                         _search.clear();
@@ -166,14 +170,18 @@ class _TasksScreenState extends State<TasksScreen> {
                     Expanded(
                       child: list.isEmpty
                           ? AppEmpty(message: LocaleKeys.tasks_emptyFilter.tr())
-                          : ListView.separated(
-                              padding:
-                                  EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 100.h),
-                              itemCount: list.length,
-                              separatorBuilder: (_, __) =>
-                                  SizedBox(height: 10.h),
-                              itemBuilder: (_, i) =>
-                                  TaskCard(task: list[i], index: i),
+                          : RefreshIndicator(
+                              onRefresh: _cubit.refresh,
+                              child: ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: EdgeInsets.fromLTRB(
+                                    20.w, 12.h, 20.w, 100.h),
+                                itemCount: list.length,
+                                separatorBuilder: (_, __) =>
+                                    SizedBox(height: 10.h),
+                                itemBuilder: (_, i) =>
+                                    TaskCard(task: list[i], index: i),
+                              ),
                             ),
                     ),
                   ],

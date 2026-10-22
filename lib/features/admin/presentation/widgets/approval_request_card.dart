@@ -1,18 +1,18 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/app_sheet.dart';
 import '../../../../core/widgets/person_row.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../requests/data/models/request_model.dart';
 import '../../../requests/presentation/widgets/reason_box.dart';
-import '../../../team/logic/team_cubit.dart';
 import '../../logic/approvals_cubit.dart';
 import 'approval_box.dart';
 import 'decision_buttons.dart';
 import 'reject_request_sheet.dart';
+import 'requester_role_chip.dart';
 
 class ApprovalRequestCard extends StatelessWidget {
   const ApprovalRequestCard({super.key, required this.request, this.index = 0});
@@ -23,12 +23,7 @@ class ApprovalRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = request.employee ?? '';
-    final job = getIt<TeamCubit>()
-            .employees
-            .where((e) => e.name == name)
-            .map((e) => e.jobTitle)
-            .firstOrNull ??
-        '';
+    final job = request.employeeJob ?? '';
     return ApprovalBox(
       index: index,
       child: Column(
@@ -36,7 +31,9 @@ class ApprovalRequestCard extends StatelessWidget {
         children: [
           PersonRow(
               name: name,
+              avatarImage: request.employeeImage,
               subtitle: job,
+              titleBadge: RequesterRoleChip(request.requesterRole),
               trailing: StatusChip(label: request.when)),
           ReasonBox(
             label: request.title,
@@ -52,7 +49,7 @@ class ApprovalRequestCard extends StatelessWidget {
             acceptLabel: LocaleKeys.admin_approve.tr(),
             onReject: () => AppSheet.show(context,
                 child: RejectRequestSheet(request: request)),
-            onAccept: () => getIt<ApprovalsCubit>().approve(request),
+            onAccept: () => context.read<ApprovalsCubit>().approve(request),
           ),
         ],
       ),

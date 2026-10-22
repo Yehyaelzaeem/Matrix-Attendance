@@ -1,93 +1,51 @@
-import '../../../core/utils/app_constants.dart';
+import '../../../core/models/paginated.dart';
+import '../../../core/network/api_endpoints.dart';
+import '../../../core/network/api_handler.dart';
+import '../../../core/network/dio_client.dart';
+import '../../../core/utils/json_reader.dart';
+import '../../auth/data/models/user_role.dart';
 import '../../requests/data/models/request_model.dart';
-import 'models/approval_models.dart';
 
-class ApprovalsRepo {
-  final List<RequestModel> _requests = [
-    const RequestModel(
-      id: 'a1',
-      employee: 'أحمد محمد',
-      type: RequestType.swap,
-      title: 'الأحد 4 أكتوبر من البيت',
-      subtitle: 'بدل الشركة',
-      status: RequestStatus.pending,
-      reason: 'عندي صيانة في البيت ومحتاج أبقى موجود.',
-      when: 'من ساعتين',
-    ),
-    const RequestModel(
-      id: 'a2',
-      employee: 'سارة علي',
-      type: RequestType.late,
-      title: 'إذن تأخير – بكرة',
-      subtitle: 'الحضور 11:00',
-      status: RequestStatus.pending,
-      reason: 'عندي ميعاد دكتور الصبح.',
-      when: 'من 40 دقيقة',
-    ),
-    const RequestModel(
-      id: 'a3',
-      employee: 'كريم عادل',
-      type: RequestType.leave,
-      title: 'إجازة يومين',
-      subtitle: '7 – 8 أكتوبر',
-      status: RequestStatus.pending,
-      reason: 'فرح أخويا في المنصورة.',
-      when: 'امبارح',
-    ),
-    const RequestModel(
-      id: 'a4',
-      employee: 'عمر فاروق',
-      type: RequestType.fix,
-      title: 'تعديل انصراف – الاثنين',
-      subtitle: 'الانصراف الفعلي 5:40',
-      status: RequestStatus.pending,
-      reason: 'النت فصل ومعرفتش أعمل Check-out.',
-      when: 'امبارح',
-    ),
-  ];
+class ApprovalsRepo with ApiHandler {
+  ApprovalsRepo({required DioClient dio}) : _dio = dio;
 
-  final List<NewAccountModel> _accounts = [
-    const NewAccountModel(
-        name: 'ياسمين حسام',
-        phone: '01098765432',
-        jobTitle: 'QA Tester (Manual)',
-        when: 'من ساعة'),
-    const NewAccountModel(
-        name: 'زياد محمود',
-        phone: '01156781234',
-        jobTitle: 'Flutter Developer',
-        when: 'من 3 ساعات'),
-  ];
+  final DioClient _dio;
 
-  final List<ApprovalLogEntry> _log = [
-    const ApprovalLogEntry(
-        name: 'منة الله سمير',
-        what: 'إذن انصراف مبكر',
-        outcome: LogOutcome.approved,
-        when: 'امبارح'),
-    const ApprovalLogEntry(
-        name: 'خالد وليد',
-        what: 'تبديل مكان',
-        outcome: LogOutcome.rejected,
-        when: 'من يومين',
-        reason: 'يوم ديمو العميل'),
-  ];
+  Future<(Paginated<RequestModel>, RoleSummary)> _list(
+    String path, {
+    UserRole? role,
+    String? status,
+    int page = 1,
+  }) =>
+      guard(() async {
+        final data = dataOf(await _dio.get(path, queryParameters: {
+          'page': page,
+          if (status != null) 'status': status,
+          if (role != null) 'role': role.name,
+        }));
+        return (
+          Paginated.fromData(data, 'requests', RequestModel.fromJson),
+          RoleSummary.fromJson(data['summary']),
+        );
+      });
 
-  Future<(List<RequestModel>, List<NewAccountModel>, List<ApprovalLogEntry>)>
-      getAll() async {
-    await Future.delayed(AppConstants.mockLatency);
-    return (List.of(_requests), List.of(_accounts), List.of(_log));
-  }
+  Future<(Paginated<RequestModel>, RoleSummary)> pending(
+          {UserRole? role, int page = 1}) =>
+      _list(ApiEndpoints.adminRequests,
+          role: role, status: 'pending', page: page);
 
-  Future<void> decideRequest(String id, ApprovalLogEntry entry) async {
-    await Future.delayed(AppConstants.mockLatency);
-    _requests.removeWhere((r) => r.id == id);
-    _log.insert(0, entry);
-  }
+  Future<(Paginated<RequestModel>, RoleSummary)> log(
+          {UserRole? role, int page = 1}) =>
+      _list(ApiEndpoints.approvalsLog, role: role, page: page);
 
-  Future<void> decideAccount(String name, ApprovalLogEntry entry) async {
-    await Future.delayed(AppConstants.mockLatency);
-    _accounts.removeWhere((a) => a.name == name);
-    _log.insert(0, entry);
-  }
+  Future<RequestModel> approve(int id) => guard(() async {
+        final data = dataOf(await _dio.post(ApiEndpoints.approveRequest(id)));
+        return RequestModel.fromJson(JsonReader.map(data['request']));
+      });
+
+  Future<RequestModel> reject(int id, String reason) => guard(() async {
+        final data = dataOf(await _dio
+            .post(ApiEndpoints.rejectRequest(id), data: {'reason': reason}));
+        return RequestModel.fromJson(JsonReader.map(data['request']));
+      });
 }

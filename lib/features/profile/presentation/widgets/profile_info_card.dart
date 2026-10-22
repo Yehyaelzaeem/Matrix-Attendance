@@ -2,7 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/app_card.dart';
@@ -18,9 +18,10 @@ class ProfileInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final projects = getIt<ProjectsCubit>()
+    final projects = context
+        .watch<ProjectsCubit>()
         .projects
-        .where((p) => p.hasMember(user.name))
+        .where((p) => p.hasMember(user.id))
         .map((p) => p.name)
         .join(' · ');
     return AppCard(

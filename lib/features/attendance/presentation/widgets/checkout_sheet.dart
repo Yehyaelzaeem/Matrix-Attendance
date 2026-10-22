@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/extensions/extensions.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_emojis.dart';
@@ -32,7 +32,7 @@ class _CheckoutSheetState extends State<CheckoutSheet> {
 
   Future<void> _confirm() async {
     setState(() => _loading = true);
-    final day = await getIt<AttendanceCubit>().checkOut();
+    final day = await context.read<AttendanceCubit>().checkOut();
     if (!mounted) return;
     setState(() {
       _loading = false;

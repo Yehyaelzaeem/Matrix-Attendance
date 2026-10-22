@@ -58,6 +58,10 @@ abstract class LocaleKeys {
   static const String common_date = 'common.date';
   static const String common_by = 'common.by';
   static const String common_dateSeparator = 'common.date_separator';
+  static const String common_minutesAgo = 'common.minutes_ago';
+  static const String common_hoursAgo = 'common.hours_ago';
+  static const String common_yesterday = 'common.yesterday';
+  static const String common_daysAgo = 'common.days_ago';
 
   static const String validation_required = 'validation.required';
   static const String validation_invalidPhone = 'validation.invalid_phone';
@@ -156,6 +160,8 @@ abstract class LocaleKeys {
   static const String auth_passLabel = 'auth.pass_label';
   static const String auth_ribbon = 'auth.ribbon';
   static const String auth_stillPending = 'auth.still_pending';
+  static const String auth_adminOnlyNote = 'auth.admin_only_note';
+  static const String auth_otpSmsChip = 'auth.otp_sms_chip';
 
   static const String roles_employee = 'roles.employee';
   static const String roles_reviewer = 'roles.reviewer';
@@ -275,6 +281,17 @@ abstract class LocaleKeys {
   static const String attendance_waResume = 'attendance.wa_resume';
   static const String attendance_waCheckOut = 'attendance.wa_check_out';
   static const String attendance_waPausePart = 'attendance.wa_pause_part';
+  static const String attendance_waNotInstalled = 'attendance.wa_not_installed';
+  static const String attendance_waPosted = 'attendance.wa_posted';
+  static const String attendance_waSendFailed = 'attendance.wa_send_failed';
+  static const String attendance_latePermitted = 'attendance.late_permitted';
+  static const String attendance_locationDisabled =
+      'attendance.location_disabled';
+  static const String attendance_locationDenied = 'attendance.location_denied';
+  static const String attendance_locationDeniedForever =
+      'attendance.location_denied_forever';
+  static const String attendance_locationFailed = 'attendance.location_failed';
+  static const String attendance_mockLocation = 'attendance.mock_location';
 
   static const String board_title = 'board.title';
   static const String board_todayShort = 'board.today_short';
@@ -291,6 +308,12 @@ abstract class LocaleKeys {
   static const String board_statusLeave = 'board.status_leave';
   static const String board_tabPaused = 'board.tab_paused';
   static const String board_empty = 'board.empty';
+  static const String board_noteLate = 'board.note_late';
+  static const String board_noteLatePermitted = 'board.note_late_permitted';
+  static const String board_notePaused = 'board.note_paused';
+  static const String board_noteWorked = 'board.note_worked';
+  static const String board_noteDeficit = 'board.note_deficit';
+  static const String board_holiday = 'board.holiday';
 
   static const String requests_title = 'requests.title';
   static const String requests_new = 'requests.new';
@@ -334,6 +357,8 @@ abstract class LocaleKeys {
   static const String requests_subSwapOffice = 'requests.sub_swap_office';
   static const String requests_subFix = 'requests.sub_fix';
   static const String requests_subSchedule = 'requests.sub_schedule';
+  static const String requests_subtitle = 'requests.subtitle';
+  static const String requests_pendingBadge = 'requests.pending_badge';
 
   static const String decisions_title = 'decisions.title';
   static const String decisions_subtitle = 'decisions.subtitle';
@@ -388,6 +413,8 @@ abstract class LocaleKeys {
   static const String decisions_publishNotify = 'decisions.publish_notify';
   static const String decisions_published = 'decisions.published';
   static const String decisions_newBadge = 'decisions.new_badge';
+  static const String decisions_endsToday = 'decisions.ends_today';
+  static const String decisions_ended = 'decisions.ended';
 
   static const String tasks_title = 'tasks.title';
   static const String tasks_reviewTitle = 'tasks.review_title';
@@ -491,6 +518,9 @@ abstract class LocaleKeys {
   static const String tasks_toastCommented = 'tasks.toast_commented';
   static const String tasks_toastCreated = 'tasks.toast_created';
   static const String tasks_toastDeleted = 'tasks.toast_deleted';
+  static const String tasks_reopenedComment = 'tasks.reopened_comment';
+  static const String tasks_statusChangedComment =
+      'tasks.status_changed_comment';
 
   static const String projects_title = 'projects.title';
   static const String projects_countSub = 'projects.count_sub';
@@ -684,6 +714,11 @@ abstract class LocaleKeys {
   static const String reports_toastAllReviewed = 'reports.toast_all_reviewed';
   static const String reports_toastClosed = 'reports.toast_closed';
   static const String reports_toastReopened = 'reports.toast_reopened';
+  static const String reports_lateCount = 'reports.late_count';
+  static const String reports_unexcused = 'reports.unexcused';
+  static const String reports_subAttendanceApi = 'reports.sub_attendance_api';
+  static const String reports_closeOpenDays = 'reports.close_open_days';
+  static const String reports_closeBlocked = 'reports.close_blocked';
 
   static const String reviewer_subtitle = 'reviewer.subtitle';
   static const String reviewer_monthReview = 'reviewer.month_review';
@@ -796,6 +831,11 @@ abstract class LocaleKeys {
   static const String admin_name = 'admin.name';
   static const String admin_title = 'admin.title';
   static const String admin_profileSaved = 'admin.profile_saved';
+  static const String admin_allRequests = 'admin.all_requests';
+  static const String admin_fromEmployees = 'admin.from_employees';
+  static const String admin_fromReviewers = 'admin.from_reviewers';
+  static const String admin_geofenceInfoApi = 'admin.geofence_info_api';
+  static const String admin_hoursInfoApi = 'admin.hours_info_api';
 
   static const String team_employeesTitle = 'team.employees_title';
   static const String team_employeesCount = 'team.employees_count';
@@ -829,6 +869,26 @@ abstract class LocaleKeys {
   static const String team_suspend = 'team.suspend';
   static const String team_suspendedToast = 'team.suspended_toast';
   static const String team_savedToast = 'team.saved_toast';
+  static const String team_copied = 'team.copied';
+  static const String team_cantOpen = 'team.cant_open';
+  static const String team_mobile = 'team.mobile';
+  static const String team_noEmail = 'team.no_email';
+  static const String team_call = 'team.call';
+  static const String team_whatsapp = 'team.whatsapp';
+  static const String team_sms = 'team.sms';
+  static const String team_emailAction = 'team.email_action';
+  static const String team_newEmployee = 'team.new_employee';
+  static const String team_loginPhone = 'team.login_phone';
+  static const String team_emailHint = 'team.email_hint';
+  static const String team_duplicateName = 'team.duplicate_name';
+  static const String team_addedToast = 'team.added_toast';
+  static const String team_addNote = 'team.add_note';
+  static const String team_addEmployee = 'team.add_employee';
+  static const String team_activatedToast = 'team.activated_toast';
+  static const String team_deviceResetToast = 'team.device_reset_toast';
+  static const String team_activate = 'team.activate';
+  static const String team_resetDevice = 'team.reset_device';
+  static const String team_suspendedChip = 'team.suspended_chip';
 
   static const String profile_phone = 'profile.phone';
   static const String profile_role = 'profile.role';
@@ -852,6 +912,7 @@ abstract class LocaleKeys {
   static const String profile_menuDevice = 'profile.menu_device';
   static const String profile_deviceInfo = 'profile.device_info';
   static const String profile_notificationsInfo = 'profile.notifications_info';
+  static const String profile_deviceApi = 'profile.device_api';
 
   static const String settings_language = 'settings.language';
   static const String settings_languageTitle = 'settings.language_title';
@@ -863,4 +924,11 @@ abstract class LocaleKeys {
   static const String error_notFound = 'error.not_found';
   static const String error_generic = 'error.generic';
   static const String error_pageNotFound = 'error.page_not_found';
+  static const String error_timeout = 'error.timeout';
+  static const String error_noInternet = 'error.no_internet';
+
+  static const String notifications_title = 'notifications.title';
+  static const String notifications_unreadSub = 'notifications.unread_sub';
+  static const String notifications_allRead = 'notifications.all_read';
+  static const String notifications_empty = 'notifications.empty';
 }

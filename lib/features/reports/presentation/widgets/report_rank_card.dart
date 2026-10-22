@@ -8,7 +8,6 @@ import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_text.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../core/widgets/meter_bar.dart';
-import '../../../tasks/data/models/task_kpi.dart';
 import '../../data/models/employee_report.dart';
 import 'report_score_color.dart';
 import 'reviewed_dot.dart';
@@ -16,8 +15,7 @@ import 'reviewed_dot.dart';
 class ReportRankCard extends StatelessWidget {
   const ReportRankCard({
     super.key,
-    required this.report,
-    required this.kpi,
+    required this.person,
     required this.mode,
     required this.onTap,
     this.position,
@@ -25,46 +23,43 @@ class ReportRankCard extends StatelessWidget {
     this.index = 0,
   });
 
-  final EmployeeReport report;
-  final TaskKpi kpi;
+  final ReportPerson person;
   final ReportMode mode;
   final VoidCallback onTap;
   final int? position;
   final bool? reviewed;
   final int index;
 
-  String get _subtitle => switch (mode) {
-        ReportMode.attendance =>
-          LocaleKeys.reports_subAttendance.tr(namedArgs: {
-                'n': '${report.lateCount}',
-                'm': '${report.lateMinutes}',
-              }) +
-              (report.violations > 0
-                  ? LocaleKeys.reports_subViolations
-                      .tr(namedArgs: {'n': '${report.violations}'})
-                  : ''),
-        ReportMode.kpi => kpi.total == 0
-            ? LocaleKeys.reports_subNoTasks.tr()
-            : LocaleKeys.reports_subKpi.tr(namedArgs: {
-                  'a': '${kpi.done}',
-                  'b': '${kpi.total}',
-                  'p': '${kpi.onTimePercent}',
-                }) +
-                (kpi.late > 0
-                    ? LocaleKeys.reports_subKpiLate
-                        .tr(namedArgs: {'n': '${kpi.late}'})
-                    : ''),
-        ReportMode.overall => LocaleKeys.reports_subOverall.tr(namedArgs: {
-            'a': '${report.attendanceScore}',
-            'b': kpi.score == null
-                ? LocaleKeys.common_dash.tr()
-                : '${kpi.score}%',
-          }),
-      };
+  String get _subtitle {
+    final p = person;
+    return switch (mode) {
+      ReportMode.attendance =>
+        LocaleKeys.reports_subAttendanceApi.tr(namedArgs: {
+          'a': '${p.lineInt('present')}',
+          'b': '${p.lineInt('required')}',
+          'p': '${p.lineInt('commitment')}',
+        }),
+      ReportMode.kpi => p.lineInt('total') == 0
+          ? LocaleKeys.reports_subNoTasks.tr()
+          : LocaleKeys.reports_subKpi.tr(namedArgs: {
+              'a': '${p.lineInt('done')}',
+              'b': '${p.lineInt('total')}',
+              'p': p.lineIntOrNull('on_time_pct') == null
+                  ? LocaleKeys.common_dash.tr()
+                  : '${p.lineInt('on_time_pct')}',
+            }),
+      ReportMode.overall => LocaleKeys.reports_subOverall.tr(namedArgs: {
+          'a': '${p.lineInt('attendance')}',
+          'b': p.lineIntOrNull('tasks_kpi') == null
+              ? LocaleKeys.common_dash.tr()
+              : '${p.lineInt('tasks_kpi')}%',
+        }),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
-    final value = report.value(mode, kpi);
+    final value = person.score ?? 0;
     final color = ReportScoreColor.of(value);
     final muted = AppColors.textSecondaryColor.themeColor;
     return FadeSlideIn(
@@ -91,13 +86,13 @@ class ReportRankCard extends StatelessWidget {
                 ),
                 SizedBox(width: 8.w),
               ],
-              AppAvatar(name: report.name),
+              AppAvatar(name: person.name, imagePath: person.image),
               SizedBox(width: 12.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AppText(report.name,
+                    AppText(person.name,
                         fontWeight: FontWeight.w700, maxLines: 1),
                     AppText(_subtitle,
                         fontSize: 11.5, color: muted, maxLines: 1),
@@ -111,7 +106,10 @@ class ReportRankCard extends StatelessWidget {
                 width: 52.w,
                 child: Column(
                   children: [
-                    AppText('$value%',
+                    AppText(
+                        person.score == null
+                            ? LocaleKeys.common_dash.tr()
+                            : '$value%',
                         numeric: true,
                         fontSize: 18,
                         fontWeight: FontWeight.w700,

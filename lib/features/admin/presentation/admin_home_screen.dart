@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../app/router/routes.dart';
-import '../../../core/di/injection.dart';
 import '../../../core/extensions/extensions.dart';
 import '../../../core/utils/app_colors.dart';
 import '../../../core/utils/app_emojis.dart';
@@ -12,95 +11,91 @@ import '../../../core/utils/locale_keys.dart';
 import '../../../core/widgets/alert_tile.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/header_overlap_layout.dart';
+import '../../../core/widgets/screen_state_layout.dart';
 import '../../../core/widgets/section_title.dart';
 import '../../attendance/presentation/widgets/home_header.dart';
-import '../../board/logic/board_cubit.dart';
-import '../../decisions/data/models/decision_model.dart';
-import '../../decisions/logic/decisions_cubit.dart';
+import '../../dashboard/logic/dashboard_cubit.dart';
 import '../../decisions/presentation/widgets/compose_decision_sheet.dart';
 import '../../layout/logic/app_tab.dart';
 import '../../layout/logic/layout_cubit.dart';
 import '../../tasks/data/models/task_enums.dart';
-import '../../tasks/logic/tasks_cubit.dart';
-import '../logic/approvals_cubit.dart';
 import '../logic/approvals_tab_cubit.dart';
 import 'widgets/admin_kpi_grid.dart';
 import 'widgets/quick_actions_row.dart';
 
-class AdminHomeScreen extends StatelessWidget {
+class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
 
   @override
+  State<AdminHomeScreen> createState() => _AdminHomeScreenState();
+}
+
+class _AdminHomeScreenState extends State<AdminHomeScreen> {
+  late final DashboardCubit _cubit = context.read<DashboardCubit>();
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit.loadAdmin();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final approvals = getIt<ApprovalsCubit>();
-    final decisions = getIt<DecisionsCubit>();
-    final tasks = getIt<TasksCubit>();
-    final layout = getIt<LayoutCubit>();
+    final layout = context.read<LayoutCubit>();
     return ColoredBox(
       color: AppColors.backgroundColor.themeColor,
-      child: BlocBuilder<ApprovalsCubit, ApprovalsState>(
-        bloc: approvals,
-        builder: (context, approvalsState) =>
-            BlocBuilder<DecisionsCubit, DecisionsState>(
-          bloc: decisions,
-          builder: (context, _) => BlocBuilder<TasksCubit, TasksState>(
-            bloc: tasks,
-            builder: (context, _) {
-              final pending =
-                  approvalsState is ApprovalsSuccess ? approvalsState : null;
-              final late = tasks.tasks.where((t) => t.isLate).toList();
-              final poll = decisions.decisions
-                  .where((d) => d.kind == DecisionKind.poll)
-                  .firstOrNull;
-              final decision = decisions.decisions
-                  .where((d) => d.kind == DecisionKind.decision)
-                  .firstOrNull;
-              return SingleChildScrollView(
+      child: BlocBuilder<DashboardCubit, DashboardState>(
+        builder: (context, state) => CustomScreenStateLayout(
+          isLoading: state.admin == null && state.error == null,
+          error: state.admin == null && state.error != null
+              ? ErrorModel(
+                  code: ErrorEnum.otherError, errorMessage: state.error!)
+              : null,
+          onRetry: _cubit.loadAdmin,
+          builder: (_) {
+            final data = state.admin!;
+            final requests = data.pendingRequests;
+            final late = data.overdueTasks;
+            final poll = data.activePoll;
+            final decision = data.openDecision;
+            return RefreshIndicator(
+              onRefresh: _cubit.loadAdmin,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: HeaderOverlapLayout(
                   overlap: 72,
                   header: HomeHeader(subtitle: LocaleKeys.admin_dashboard.tr()),
                   body: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      AdminKpiGrid(day: getIt<BoardCubit>().today),
+                      AdminKpiGrid(summary: data.today),
                       SectionTitle(title: LocaleKeys.admin_needsDecision.tr()),
                       AlertTile(
                         emoji: AppEmojis.inbox,
                         background: AppColors.warningSoftColor.themeColor,
                         title: LocaleKeys.admin_pendingRequests.tr(),
-                        subtitle: LocaleKeys.admin_pendingRequestsSub.tr(),
-                        count: '${pending?.requests.length ?? 0}',
+                        subtitle:
+                            LocaleKeys.admin_pendingRequestsSub.tr(namedArgs: {
+                          'e': '${requests.employee}',
+                          'r': '${requests.reviewer}',
+                        }),
+                        count: '${requests.total}',
                         countColor: AppColors.warningTextColor.themeColor,
                         onTap: () {
-                          getIt<ApprovalsTabCubit>()
+                          context
+                              .read<ApprovalsTabCubit>()
                               .select(ApprovalsTab.requests);
                           layout.select(AppTab.approvals);
                         },
                       ),
-                      AlertTile(
-                        emoji: AppEmojis.technologist,
-                        background: AppColors.primarySoftColor.themeColor,
-                        title: LocaleKeys.admin_newAccounts.tr(),
-                        subtitle: LocaleKeys.admin_newAccountsSub.tr(),
-                        count: '${pending?.accounts.length ?? 0}',
-                        countColor: AppColors.primaryColor.themeColor,
-                        onTap: () {
-                          getIt<ApprovalsTabCubit>()
-                              .select(ApprovalsTab.accounts);
-                          layout.select(AppTab.approvals);
-                        },
-                      ),
-                      if (late.isNotEmpty)
+                      if (late != null)
                         AlertTile(
                           emoji: AppEmojis.alarm,
                           background: AppColors.errorSoftColor.themeColor,
                           title: LocaleKeys.admin_lateTasks.tr(),
-                          subtitle:
-                              LocaleKeys.admin_lateTasksSub.tr(namedArgs: {
-                            'n':
-                                '${late.map((t) => t.projectId).toSet().length}',
-                          }),
-                          count: '${late.length}',
+                          subtitle: LocaleKeys.admin_lateTasksSub
+                              .tr(namedArgs: {'n': '${late.projects}'}),
+                          count: '${late.count}',
                           countColor: AppColors.errorColor.themeColor,
                           onTap: () => context.pushNamed(Routes.tasksScreen,
                               arguments: {'due': DueFilter.late}),
@@ -112,12 +107,12 @@ class AdminHomeScreen extends StatelessWidget {
                           title: poll.title,
                           subtitle:
                               LocaleKeys.admin_pollProgress.tr(namedArgs: {
-                            'a': '${poll.votes}',
+                            'a': '${poll.voted}',
                             'b': '${poll.total}',
-                            'deadline': poll.deadline ?? '',
+                            'deadline': LocaleKeys.decisions_daysLeft
+                                .tr(namedArgs: {'n': '${poll.daysLeft}'}),
                           }),
-                          count:
-                              '${poll.votes == 0 ? 0 : (poll.yes / poll.votes * 100).round()}%',
+                          count: '${poll.yesPct}%',
                           countColor: AppColors.violetColor.themeColor,
                           onTap: () => layout.select(AppTab.adminDecisions),
                         ),
@@ -126,11 +121,9 @@ class AdminHomeScreen extends StatelessWidget {
                           emoji: AppEmojis.pin,
                           background: AppColors.orangeSoftColor.themeColor,
                           title: decision.title,
-                          subtitle:
-                              LocaleKeys.admin_decisionPending.tr(namedArgs: {
-                            'n': '${decision.total - decision.doneCount}',
-                          }),
-                          count: '${decision.doneCount}/${decision.total}',
+                          subtitle: LocaleKeys.admin_decisionPending
+                              .tr(namedArgs: {'n': '${decision.pending}'}),
+                          count: '${decision.acked}/${decision.total}',
                           countColor: AppColors.orangeTextColor.themeColor,
                           onTap: () => layout.select(AppTab.adminDecisions),
                         ),
@@ -166,9 +159,9 @@ class AdminHomeScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

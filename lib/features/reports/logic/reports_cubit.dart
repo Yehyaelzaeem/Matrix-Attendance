@@ -2,8 +2,10 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/network/network_exceptions.dart';
 import '../../../core/utils/app_overlay.dart';
 import '../../../core/utils/date_helper.dart';
+import '../../../core/utils/json_reader.dart';
 import '../../../core/utils/locale_keys.dart';
 import '../data/models/employee_report.dart';
 import '../data/reports_repo.dart';
@@ -15,67 +17,142 @@ class ReportsCubit extends Cubit<ReportsState> {
 
   final ReportsRepo _repo;
 
+  ReportMode _mode = ReportMode.attendance;
+  bool _sortDesc = true;
+  bool _previous = false;
+
+  ReportMode get mode => _mode;
+  bool get sortDesc => _sortDesc;
+  bool get viewingPrevious => _previous;
+
   ReportsSuccess? get data =>
       state is ReportsSuccess ? state as ReportsSuccess : null;
 
+  static DateTime get _now => DateTime.now();
+
+  static String get currentMonth => JsonReader.formatMonth(_now);
+
+  static String get previousMonth =>
+      JsonReader.formatMonth(DateTime(_now.year, _now.month - 1));
+
+  String get month => _previous ? previousMonth : currentMonth;
+
   Future<void> load() async {
-    if (state is ReportsSuccess) return;
+    if (state is ReportsSuccess || state is ReportsLoading) return;
     emit(const ReportsLoading());
+    await _fetch();
+  }
+
+  Future<void> refresh() => _fetch();
+
+  Future<void> _fetch() async {
+    final current = data;
+    if (current != null) emit(current.copyWith(refreshing: true));
     try {
-      final reports = await _repo.getMonthReports();
-      emit(ReportsSuccess(
-        reports: reports,
-        reviewed: {
-          reports[0].name,
-          reports[3].name,
-          reports[4].name,
-          reports[8].name
-        },
-      ));
-    } catch (_) {
-      final msg = LocaleKeys.error_generic.tr();
-      AppOverlay.showError(msg);
-      emit(ReportsError(msg));
+      final board =
+          await _repo.board(month: month, mode: _mode, sortDesc: _sortDesc);
+      emit(ReportsSuccess(board: board, viewingPrevious: _previous));
+    } catch (e) {
+      final msg = NetworkException.from(e).message;
+      if (current == null) {
+        emit(ReportsError(msg));
+      } else {
+        emit(current.copyWith(refreshing: false));
+        AppOverlay.showError(msg);
+      }
     }
   }
 
-  void setMode(ReportMode mode) => _update((d) => d.copyWith(mode: mode));
+  Future<void> setMode(ReportMode mode) async {
+    _mode = mode;
+    await _fetch();
+  }
 
-  void setSortDesc(bool desc) => _update((d) => d.copyWith(sortDesc: desc));
+  Future<void> setSortDesc(bool desc) async {
+    _sortDesc = desc;
+    await _fetch();
+  }
 
-  void viewPrevious(bool previous) =>
-      _update((d) => d.copyWith(viewingPrevious: previous));
+  Future<void> viewPrevious(bool previous) async {
+    _previous = previous;
+    await _fetch();
+  }
 
-  void toggleReviewed(String name) {
-    final d = data;
-    if (d == null) return;
-    final reviewed = {...d.reviewed};
-    if (!reviewed.remove(name)) {
-      reviewed.add(name);
-      AppOverlay.showSuccess(
-          LocaleKeys.reports_toastReviewed.tr(namedArgs: {'name': name}));
+  void _setReviewed(int userId, bool reviewed) {
+    final current = data;
+    if (current == null) return;
+    final board = current.board;
+    final before = board.people.where((p) => p.userId == userId).firstOrNull;
+    if (before == null || before.reviewed == reviewed) return;
+    emit(current.copyWith(
+      board: board.copyWith(
+        people: [
+          for (final p in board.people)
+            p.userId == userId ? p.withReviewed(reviewed) : p,
+        ],
+        reviewedDone: board.reviewedDone + (reviewed ? 1 : -1),
+      ),
+    ));
+  }
+
+  Future<bool> setReviewed(int userId, String name, bool reviewed) async {
+    try {
+      await _repo.setReviewed(month, userId, reviewed);
+      _setReviewed(userId, reviewed);
+      if (reviewed) {
+        AppOverlay.showSuccess(
+            LocaleKeys.reports_toastReviewed.tr(namedArgs: {'name': name}));
+      }
+      return true;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return false;
     }
-    emit(d.copyWith(reviewed: reviewed));
   }
 
-  void markAllReviewed() {
-    _update((d) => d.copyWith(reviewed: {for (final r in d.reports) r.name}));
-    AppOverlay.showSuccess(LocaleKeys.reports_toastAllReviewed.tr());
+  Future<void> markAllReviewed() async {
+    try {
+      await _repo.reviewAll(month);
+      AppOverlay.showSuccess(LocaleKeys.reports_toastAllReviewed.tr());
+      await _fetch();
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+    }
   }
 
-  void closeMonth() {
-    _update((d) => d.copyWith(currentClosed: true));
-    AppOverlay.showSuccess(LocaleKeys.reports_toastClosed
-        .tr(namedArgs: {'month': DateHelper.monthName(DateTime.now().month)}));
+  Future<CloseCheck?> closeCheck() async {
+    try {
+      return await _repo.closeCheck(month);
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return null;
+    }
   }
 
-  void reopenMonth(String reason) {
-    _update((d) => d.viewingPrevious ? d : d.copyWith(currentClosed: false));
-    AppOverlay.showSuccess(LocaleKeys.reports_toastReopened.tr());
+  Future<bool> closeMonth() async {
+    try {
+      await _repo.close(month);
+      AppOverlay.showSuccess(LocaleKeys.reports_toastClosed.tr(namedArgs: {
+        'month': DateHelper.monthName(
+            _previous ? DateTime(_now.year, _now.month - 1).month : _now.month)
+      }));
+      await _fetch();
+      return true;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return false;
+    }
   }
 
-  void _update(ReportsSuccess Function(ReportsSuccess d) f) {
-    final d = data;
-    if (d != null) emit(f(d));
+  Future<bool> reopenMonth(String reason) async {
+    try {
+      await _repo.reopen(month, reason);
+      AppOverlay.showSuccess(LocaleKeys.reports_toastReopened.tr());
+      await _fetch();
+      return true;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return false;
+    }
   }
 }

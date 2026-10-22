@@ -87,7 +87,9 @@ class _CustomPaginationGridviewState<T>
     if (!widget._hasMorePages) return;
 
     if (_scrollController.position.pixels <
-        _scrollController.position.maxScrollExtent - 200) return;
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
+    }
 
     if (widget._isLoading) return;
 

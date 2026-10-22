@@ -3,9 +3,9 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/utils/app_colors.dart';
+import '../../../core/network/network_exceptions.dart';
 import '../../../core/utils/app_overlay.dart';
-import '../../../core/utils/date_helper.dart';
+import '../../../core/utils/json_reader.dart';
 import '../../../core/utils/locale_keys.dart';
 import '../../../core/utils/validators.dart';
 import '../data/models/project_model.dart';
@@ -21,162 +21,169 @@ class ProjectsCubit extends Cubit<ProjectsState> {
   List<ProjectModel> get projects =>
       state is ProjectsSuccess ? (state as ProjectsSuccess).projects : const [];
 
-  ProjectModel? byId(String id) =>
+  ProjectModel? byId(int id) =>
       state is ProjectsSuccess ? (state as ProjectsSuccess).byId(id) : null;
 
   Future<void> load() async {
-    if (state is ProjectsSuccess) return;
+    if (state is ProjectsSuccess || state is ProjectsLoading) return;
     emit(const ProjectsLoading());
+    await refresh();
+  }
+
+  Future<void> refresh() async {
     try {
       emit(ProjectsSuccess(await _repo.getProjects()));
-    } catch (_) {
-      final msg = LocaleKeys.error_generic.tr();
-      AppOverlay.showError(msg);
-      emit(ProjectsError(msg));
+    } catch (e) {
+      final msg = NetworkException.from(e).message;
+      if (state is ProjectsSuccess) {
+        AppOverlay.showError(msg);
+      } else {
+        emit(ProjectsError(msg));
+      }
     }
   }
 
-  Future<void> _put(ProjectModel project, {String? toast}) async {
-    await _repo.save(project);
+  Future<void> reload(int id) async {
+    try {
+      _put(await _repo.getProject(id));
+    } catch (_) {}
+  }
+
+  void _put(ProjectModel project) {
     final exists = byId(project.id) != null;
     emit(ProjectsSuccess(exists
         ? [for (final p in projects) p.id == project.id ? project : p]
         : [project, ...projects]));
-    if (toast != null) AppOverlay.showSuccess(toast);
   }
 
-  Future<void> setStatus(String id, ProjectStatus status) async {
-    final p = byId(id);
-    if (p == null) return;
-    await _put(
-      p.copyWith(
-        status: status,
-        delivered: status == ProjectStatus.delivered
-            ? (p.delivered ?? DateHelper.today())
-            : null,
-        clearDelivered: status != ProjectStatus.delivered,
-      ),
-      toast: LocaleKeys.projects_toastStatus
-          .tr(namedArgs: {'status': status.label}),
-    );
+  void putAll(List<ProjectModel> updated) {
+    if (updated.isEmpty) return;
+    final byId = {for (final p in updated) p.id: p};
+    emit(ProjectsSuccess([for (final p in projects) byId[p.id] ?? p]));
   }
 
-  Future<void> setManager(String id, String name) async {
-    final p = byId(id);
-    if (p == null) return;
-    await _put(p.copyWith(manager: name),
+  Future<bool> _run(Future<ProjectModel> Function() call,
+      {String? toast}) async {
+    try {
+      _put(await call());
+      if (toast != null) AppOverlay.showSuccess(toast);
+      return true;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return false;
+    }
+  }
+
+  Future<bool> setStatus(int id, ProjectStatus status) => _run(
+        () => _repo.setStatus(id, status),
+        toast: LocaleKeys.projects_toastStatus
+            .tr(namedArgs: {'status': status.label}),
+      );
+
+  Future<bool> setManager(int id, TeamMember member) => _run(
+        () => _repo.setManager(id, member.userId),
         toast: LocaleKeys.projects_toastManager
-            .tr(namedArgs: {'name': Validators.firstName(name)}));
-  }
+            .tr(namedArgs: {'name': Validators.firstName(member.name)}),
+      );
 
-  Future<void> removeMember(String id, String name,
-      {required int openTasks}) async {
-    final p = byId(id);
-    if (p == null) return;
-    final args = {'name': Validators.firstName(name), 'n': '$openTasks'};
-    await _put(
-      p.copyWith(team: p.team.where((m) => m.name != name).toList()),
-      toast: openTasks > 0
-          ? LocaleKeys.projects_toastRemovedWithTasks.tr(namedArgs: args)
-          : LocaleKeys.projects_toastRemoved.tr(namedArgs: args),
-    );
-  }
+  Future<bool> removeMember(int id, TeamMember member,
+          {required int openTasks}) =>
+      _run(
+        () => _repo.removeMember(id, member.userId),
+        toast: (openTasks > 0
+                ? LocaleKeys.projects_toastRemovedWithTasks
+                : LocaleKeys.projects_toastRemoved)
+            .tr(namedArgs: {
+          'name': Validators.firstName(member.name),
+          'n': '$openTasks',
+        }),
+      );
 
-  Future<void> addMember(String id, TeamMember member) async {
-    final p = byId(id);
-    if (p == null) return;
-    await _put(p.copyWith(team: [...p.team, member]),
+  Future<bool> addMember(int id,
+          {required int userId, required String name, required String role}) =>
+      _run(
+        () => _repo.addMember(id, userId, role),
         toast: LocaleKeys.projects_toastAdded
-            .tr(namedArgs: {'name': Validators.firstName(member.name)}));
-  }
+            .tr(namedArgs: {'name': Validators.firstName(name)}),
+      );
 
-  Future<void> markPaid(String id, int index) async {
+  Future<bool> updateClient(int id, ClientInfo client) => _run(
+        () => _repo.updateClient(id, client),
+        toast: LocaleKeys.projects_toastClientSaved.tr(),
+      );
+
+  Future<bool> uploadContract(int id, String path) => _run(
+        () => _repo.uploadContract(id, path),
+        toast: LocaleKeys.projects_toastContractUploaded.tr(),
+      );
+
+  Future<bool> addPayment(
+      int id, String label, double amount, DateTime due) async {
     final p = byId(id);
-    if (p == null) return;
-    final payments = [...p.payments];
-    payments[index] = payments[index].markPaid(DateHelper.today());
-    await _put(p.copyWith(payments: payments),
-        toast: LocaleKeys.projects_toastPaid.tr());
+    try {
+      final payment = await _repo.addPayment(id, label, amount, due);
+      if (p != null) _put(p.copyWith(payments: [...p.payments, payment]));
+      AppOverlay.showSuccess(LocaleKeys.projects_toastPaymentAdded.tr());
+      return true;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return false;
+    }
   }
 
-  Future<void> addPayment(String id, PaymentModel payment) async {
+  Future<bool> markPaid(int id, int paymentId) async {
     final p = byId(id);
-    if (p == null) return;
-    await _put(p.copyWith(payments: [...p.payments, payment]),
-        toast: LocaleKeys.projects_toastPaymentAdded.tr());
+    try {
+      final payment = await _repo.markPaid(id, paymentId);
+      if (p != null) {
+        _put(p.copyWith(payments: [
+          for (final x in p.payments) x.id == paymentId ? payment : x,
+        ]));
+      }
+      AppOverlay.showSuccess(LocaleKeys.projects_toastPaid.tr());
+      return true;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return false;
+    }
   }
 
-  Future<void> updateClient(String id, ClientInfo client) async {
-    final p = byId(id);
-    if (p == null) return;
-    await _put(p.copyWith(client: client),
-        toast: LocaleKeys.projects_toastClientSaved.tr());
-  }
-
-  Future<void> setContractFile(String id, String fileName) async {
-    final p = byId(id);
-    if (p == null) return;
-    await _put(p.copyWith(contract: p.contract.withFile(fileName)),
-        toast: LocaleKeys.projects_toastContractUploaded.tr());
-  }
-
-  Future<String> create({
+  Future<int?> create({
     required String name,
     required String kind,
     required String description,
     required String clientName,
     required String company,
     required String phone,
-    required String manager,
+    required int? managerId,
     required double value,
     required String currency,
     required DateTime start,
     required DateTime due,
   }) async {
-    final id = 'p${DateTime.now().millisecondsSinceEpoch}';
-    final palette = AppColors.avatarPalette;
-    final dash = LocaleKeys.common_dash.tr();
-    final project = ProjectModel(
-      id: id,
-      name: name,
-      kind: kind.isEmpty ? LocaleKeys.projects_newProjectKind.tr() : kind,
-      color: palette[projects.length % palette.length],
-      status: ProjectStatus.active,
-      description: description.isEmpty
-          ? LocaleKeys.projects_noDescription.tr()
-          : description,
-      manager: manager,
-      team: [TeamMember(manager, 'PM')],
-      client: ClientInfo(
-        name: clientName.isEmpty ? dash : clientName,
-        company: company.isEmpty ? dash : company,
-        phone: phone.isEmpty ? dash : phone,
-        email: dash,
-        city: dash,
-      ),
-      currency: currency,
-      value: value,
-      payments: value > 0
-          ? [
-              PaymentModel(
-                label: LocaleKeys.projects_downPayment.tr(),
-                amount: (value * 0.3).roundToDouble(),
-                due: start,
-              ),
-            ]
-          : const [],
-      start: start,
-      beta: due,
-      due: due,
-      contract: ContractInfo(
-        number: 'MC-${DateTime.now().year}-0${projects.length + 20}',
-        signedAt: start,
-        months: (due.difference(start).inDays / 30).round().clamp(1, 120),
-      ),
-    );
-    await _put(project, toast: LocaleKeys.projects_toastCreated.tr());
-    return id;
+    try {
+      var project = await _repo.create({
+        'name': name,
+        'kind': kind.isEmpty ? LocaleKeys.projects_newProjectKind.tr() : kind,
+        if (description.isNotEmpty) 'description': description,
+        if (managerId != null) 'manager_id': managerId,
+        'currency': currency,
+        'contract_value': value,
+        'start_date': JsonReader.formatDate(start),
+        'due_date': JsonReader.formatDate(due),
+      });
+      if (clientName.isNotEmpty) {
+        project = await _repo.updateClient(project.id,
+            ClientInfo(name: clientName, company: company, phone: phone));
+      }
+      _put(project);
+      AppOverlay.showSuccess(LocaleKeys.projects_toastCreated.tr());
+      return project.id;
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+      return null;
+    }
   }
 
-  Color colorOf(String id) => byId(id)?.color ?? Colors.grey;
+  Color colorOf(int id) => byId(id)?.color ?? ProjectModel.parseColor(null, id);
 }

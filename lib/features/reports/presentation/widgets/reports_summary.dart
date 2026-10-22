@@ -5,76 +5,68 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/stat_tiles.dart';
-import '../../../tasks/data/models/task_kpi.dart';
-import '../../../tasks/data/models/task_model.dart';
 import '../../data/models/employee_report.dart';
-import '../../logic/reports_cubit.dart';
 import 'report_score_color.dart';
 
 class ReportsSummary extends StatelessWidget {
-  const ReportsSummary({super.key, required this.data, required this.tasks});
+  const ReportsSummary({super.key, required this.board});
 
-  final ReportsSuccess data;
-  final List<TaskModel> tasks;
+  final ReportBoard board;
 
   @override
   Widget build(BuildContext context) {
-    final reports = data.reports;
-    final kpis = {for (final r in reports) r.name: TaskKpi.of(r.name, tasks)};
-    int value(EmployeeReport r) => r.value(data.mode, kpis[r.name]!);
-    final avg = reports.isEmpty
-        ? 0
-        : (reports.fold<int>(0, (a, r) => a + value(r)) / reports.length)
-            .round();
-    final avgTile = StatTileData(
-      value: '$avg%',
-      label: switch (data.mode) {
-        ReportMode.attendance => LocaleKeys.reports_avgAttendance.tr(),
-        ReportMode.kpi => LocaleKeys.reports_avgKpi.tr(),
-        ReportMode.overall => LocaleKeys.reports_avgOverall.tr(),
-      },
-      color: ReportScoreColor.of(avg),
-    );
-    final List<StatTileData> tiles = switch (data.mode) {
+    final b = board;
+    StatTileData avgTile(String key, String label) {
+      final avg = b.summaryIntOrNull(key);
+      return StatTileData(
+        value: avg == null ? LocaleKeys.common_dash.tr() : '$avg%',
+        label: label,
+        color: ReportScoreColor.of(avg ?? 0),
+      );
+    }
+
+    final List<StatTileData> tiles = switch (b.mode) {
       ReportMode.attendance => [
-          avgTile,
+          avgTile('avg_attendance', LocaleKeys.reports_avgAttendance.tr()),
           StatTileData(
-            value: '${reports.fold<int>(0, (a, r) => a + r.lateMinutes)}',
-            label: LocaleKeys.reports_lateMinutes.tr(),
+            value: '${b.summaryInt('late_count')}',
+            label: LocaleKeys.reports_lateCount.tr(),
           ),
           StatTileData(
-            value:
-                '${reports.fold<int>(0, (a, r) => a + r.violations + r.absences)}',
-            label: LocaleKeys.reports_violationsAbsence.tr(),
+            value: '${b.summaryInt('unexcused_absences')}',
+            label: LocaleKeys.reports_unexcused.tr(),
             color: AppColors.errorColor.themeColor,
           ),
         ],
       ReportMode.kpi => [
-          avgTile,
+          avgTile('avg_kpi', LocaleKeys.reports_avgKpi.tr()),
           StatTileData(
             value:
-                '${kpis.values.fold<int>(0, (a, k) => a + k.done)}/${kpis.values.fold<int>(0, (a, k) => a + k.total)}',
+                '${b.summaryInt('tasks_done')}/${b.summaryInt('tasks_total')}',
             label: LocaleKeys.reports_tasksDone.tr(),
           ),
           StatTileData(
-            value: '${kpis.values.fold<int>(0, (a, k) => a + k.late)}',
+            value: '${b.summaryInt('open_late')}',
             label: LocaleKeys.reports_lateNow.tr(),
             color: AppColors.errorColor.themeColor,
           ),
         ],
       ReportMode.overall => () {
-          final top = [...reports]
-            ..sort((a, b) => value(b).compareTo(value(a)));
+          final ranked = [...b.people]
+            ..sort((x, y) => (y.score ?? 0).compareTo(x.score ?? 0));
+          final top = ranked.firstOrNull;
           return [
-            avgTile,
+            avgTile('avg_overall', LocaleKeys.reports_avgOverall.tr()),
             StatTileData(
-              value: top.first.name.split(' ').first,
+              value: top == null
+                  ? LocaleKeys.common_dash.tr()
+                  : top.name.split(' ').first,
               numeric: false,
               label: LocaleKeys.reports_top
-                  .tr(namedArgs: {'n': '${value(top.first)}'}),
+                  .tr(namedArgs: {'n': '${top?.score ?? 0}'}),
             ),
             StatTileData(
-              value: '${reports.where((r) => value(r) < 70).length}',
+              value: '${b.people.where((p) => (p.score ?? 0) < 70).length}',
               label: LocaleKeys.reports_below70.tr(),
             ),
           ];

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/app_overlay.dart';
 import '../../../../core/utils/app_pickers.dart';
 import '../../../../core/utils/date_helper.dart';
@@ -43,11 +43,10 @@ class _AddPaymentSheetState extends State<AddPaymentSheet> {
       AppOverlay.showError(LocaleKeys.projects_fillPayment.tr());
       return;
     }
-    await getIt<ProjectsCubit>().addPayment(
-      widget.project.id,
-      PaymentModel(label: _label.text.trim(), amount: amount, due: _due),
-    );
-    if (mounted) Navigator.of(context).pop();
+    final ok = await context
+        .read<ProjectsCubit>()
+        .addPayment(widget.project.id, _label.text.trim(), amount, _due);
+    if (ok && mounted) Navigator.of(context).pop();
   }
 
   @override

@@ -2,7 +2,7 @@ import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/date_helper.dart';
 import '../../../../core/utils/locale_keys.dart';
@@ -43,9 +43,10 @@ class ProjectOverviewTab extends StatelessWidget {
               ? LocaleKeys.projects_lateTag.tr()
               : null,
         );
-    final managerJob = getIt<TeamCubit>()
+    final managerJob = context
+            .read<TeamCubit>()
             .employees
-            .where((e) => e.name == project.manager)
+            .where((e) => e.id == project.managerId)
             .map((e) => e.jobTitle)
             .firstOrNull ??
         '';
@@ -63,9 +64,12 @@ class ProjectOverviewTab extends StatelessWidget {
           title: LocaleKeys.projects_milestones.tr(),
           child: MilestoneTimeline(items: [
             item(LocaleKeys.projects_msReceived.tr(), project.start,
-                !project.start.isAfter(today)),
-            item(LocaleKeys.projects_msBeta.tr(), project.beta,
-                !project.beta.isAfter(today) || delivered),
+                project.start != null && !project.start!.isAfter(today)),
+            item(
+                LocaleKeys.projects_msBeta.tr(),
+                project.beta,
+                (project.beta != null && !project.beta!.isAfter(today)) ||
+                    delivered),
             item(LocaleKeys.projects_msFinal.tr(), project.due, delivered),
             item(LocaleKeys.projects_msClosed.tr(), project.delivered,
                 delivered),
@@ -113,7 +117,7 @@ class ProjectOverviewTab extends StatelessWidget {
                   options: [for (final s in ProjectStatus.values) (s, s.label)],
                   selected: project.status,
                   onChanged: (s) =>
-                      getIt<ProjectsCubit>().setStatus(project.id, s),
+                      context.read<ProjectsCubit>().setStatus(project.id, s),
                 ),
                 SizedBox(height: 8.h),
                 AppText(LocaleKeys.projects_statusHint.tr(),

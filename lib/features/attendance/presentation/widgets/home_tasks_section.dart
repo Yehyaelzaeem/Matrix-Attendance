@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/app_empty.dart';
 import '../../../../core/widgets/section_title.dart';
@@ -18,20 +17,19 @@ class HomeTasksSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cubit = getIt<TasksCubit>();
+    final cubit = context.read<TasksCubit>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionTitle(
           title: LocaleKeys.attendance_myTasks.tr(),
           actionLabel: LocaleKeys.nav_myWork.tr(),
-          onAction: () => getIt<LayoutCubit>().select(AppTab.myWork),
+          onAction: () => context.read<LayoutCubit>().select(AppTab.myWork),
         ),
         BlocBuilder<TasksCubit, TasksState>(
-          bloc: cubit,
           builder: (_, state) {
             final mine = cubit.tasks
-                .where((t) => t.assignee == cubit.me && !t.isDone)
+                .where((t) => t.assigneeId == cubit.meId && !t.isDone)
                 .toList()
               ..sort(_compare);
             final top = mine.take(2).toList();
@@ -59,6 +57,6 @@ class HomeTasksSection extends StatelessWidget {
 
   static int _compare(TaskModel a, TaskModel b) {
     if (a.returned != b.returned) return a.returned ? -1 : 1;
-    return a.due.compareTo(b.due);
+    return a.dueOrFar.compareTo(b.dueOrFar);
   }
 }

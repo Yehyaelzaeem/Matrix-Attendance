@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-enum ApprovalsTab { requests, accounts, log }
+enum ApprovalsTab { requests, log }
 
 class ApprovalsTabCubit extends Cubit<ApprovalsTab> {
   ApprovalsTabCubit() : super(ApprovalsTab.requests);

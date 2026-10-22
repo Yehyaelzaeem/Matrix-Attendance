@@ -27,11 +27,12 @@ class TaskKpi {
   final int returns;
   final int? score;
 
-  factory TaskKpi.of(String name, List<TaskModel> tasks) {
-    final mine = tasks.where((t) => t.assignee == name).toList();
+  factory TaskKpi.of(int userId, List<TaskModel> tasks) {
+    final mine = tasks.where((t) => t.assigneeId == userId).toList();
     final done = mine.where((t) => t.isDone).toList();
-    final onTime =
-        done.where((t) => t.doneAt != null && !t.doneAt!.isAfter(t.due)).length;
+    final onTime = done
+        .where((t) => t.doneAt != null && !t.doneAt!.isAfter(t.dueOrFar))
+        .length;
     final late = mine.where((t) => t.isLate).length;
     final estimate = done.fold<double>(0, (a, t) => a + t.estimate);
     final spent = done.fold<double>(0, (a, t) => a + t.spent);

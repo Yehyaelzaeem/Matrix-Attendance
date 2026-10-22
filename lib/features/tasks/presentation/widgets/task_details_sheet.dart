@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_overlay.dart';
 import '../../../../core/utils/locale_keys.dart';
@@ -27,9 +26,9 @@ import 'task_time_section.dart';
 class TaskDetailsSheet extends StatefulWidget {
   const TaskDetailsSheet({super.key, required this.taskId});
 
-  final String taskId;
+  final int taskId;
 
-  static Future<void> open(BuildContext context, String taskId) =>
+  static Future<void> open(BuildContext context, int taskId) =>
       AppSheet.show(context, child: TaskDetailsSheet(taskId: taskId));
 
   @override
@@ -37,11 +36,17 @@ class TaskDetailsSheet extends StatefulWidget {
 }
 
 class _TaskDetailsSheetState extends State<TaskDetailsSheet> {
-  final _cubit = getIt<TasksCubit>();
+  late final TasksCubit _cubit = context.read<TasksCubit>();
   final _comment = TextEditingController();
   final _commentFocus = FocusNode();
   final _editorKey = GlobalKey<TaskEditorFieldsState>();
   bool _commentError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit.loadDetail(widget.taskId);
+  }
 
   @override
   void dispose() {
@@ -77,15 +82,16 @@ class _TaskDetailsSheetState extends State<TaskDetailsSheet> {
   Future<void> _save() async {
     final values = _editorKey.currentState?.values;
     if (values == null) return;
-    await _cubit.saveEdits(
+    final ok = await _cubit.saveEdits(
       widget.taskId,
       status: values.status,
-      assignee: values.assignee,
+      assigneeId: values.assigneeId,
+      assigneeName: values.assigneeName,
       priority: values.priority,
       due: values.due,
       estimate: values.estimate,
     );
-    if (mounted) Navigator.of(context).pop();
+    if (ok && mounted) Navigator.of(context).pop();
   }
 
   Future<void> _delete() async {
@@ -95,83 +101,79 @@ class _TaskDetailsSheetState extends State<TaskDetailsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TasksCubit, TasksState>(
-      bloc: _cubit,
-      builder: (context, _) {
-        final task = _cubit.byId(widget.taskId);
-        if (task == null) return const SizedBox.shrink();
-        final project = getIt<ProjectsCubit>().byId(task.projectId);
-        final manage = _cubit.canManage;
-        final mine = task.assignee == _cubit.me;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TaskHeaderChips(task: task, project: project),
-            SizedBox(height: 8.h),
-            AppText(task.title, fontSize: 18, fontWeight: FontWeight.w800),
-            if (task.description.isNotEmpty) ...[
-              SizedBox(height: 6.h),
-              AppText(task.description,
-                  fontSize: 13.5,
-                  height: 1.8,
-                  color: AppColors.textBodyColor.themeColor),
-            ],
-            SizedBox(height: 12.h),
-            TaskStageLine(status: task.status),
-            TaskFlowActions(
-              task: task,
-              canManage: manage,
-              isMine: mine,
-              onMove: (status) => _cubit.move(task.id, status),
-              onReturn: () => _return(task),
-            ),
-            if (manage)
-              TaskEditorFields(
-                key: _editorKey,
-                task: task,
-                team: project?.team.map((m) => m.name).toList() ??
-                    [task.assignee],
-              )
-            else
-              TaskReadonlyGrid(task: task),
-            TaskTimeSection(
-              task: task,
-              canLog: mine && !task.isDone,
-              onLog: (h) => _cubit.logTime(task.id, h),
-            ),
-            AttachmentsField(
-              attachments: task.attachments,
-              onAdd: (files) => _cubit.addAttachments(task.id, files),
-              onRemove: (i) => _cubit.removeAttachment(task.id, i),
-            ),
-            if (manage)
-              CustomButton(
-                  title: LocaleKeys.common_saveChanges.tr(), onTap: _save),
-            SizedBox(height: 20.h),
-            TaskCommentsThread(task: task, me: _cubit.me),
-            CommentComposer(
-              controller: _comment,
-              focusNode: _commentFocus,
-              hasError: _commentError,
-              hint: manage &&
-                      (task.status == TaskStatus.review ||
-                          task.status == TaskStatus.test)
-                  ? LocaleKeys.tasks_commentOrReturnHint.tr()
-                  : LocaleKeys.tasks_commentHint.tr(),
-              onSend: () => _send(task),
-            ),
-            if (_cubit.isAdmin) ...[
-              SizedBox(height: 10.h),
-              CustomButton(
-                title: LocaleKeys.tasks_deleteTask.tr(),
-                type: ButtonStyleType.plain,
-                textColor: AppColors.errorColor.themeColor,
-                onTap: _delete,
-              ),
-            ],
-          ],
-        );
-      },
+    context.watch<TasksCubit>();
+    final task = _cubit.byId(widget.taskId);
+    if (task == null) return const SizedBox.shrink();
+    final projects = context.watch<ProjectsCubit>();
+    final project = projects.byId(task.projectId);
+    final manage = _cubit.canManage;
+    final mine = task.assigneeId == _cubit.meId;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TaskHeaderChips(
+            task: task, projectColor: projects.colorOf(task.projectId)),
+        SizedBox(height: 8.h),
+        AppText(task.title, fontSize: 18, fontWeight: FontWeight.w800),
+        if (task.description.isNotEmpty) ...[
+          SizedBox(height: 6.h),
+          AppText(task.description,
+              fontSize: 13.5,
+              height: 1.8,
+              color: AppColors.textBodyColor.themeColor),
+        ],
+        SizedBox(height: 12.h),
+        TaskStageLine(status: task.status),
+        TaskFlowActions(
+          task: task,
+          canManage: manage,
+          isMine: mine,
+          onMove: (status) => _cubit.move(task.id, status),
+          onReturn: () => _return(task),
+        ),
+        if (manage)
+          TaskEditorFields(
+            key: _editorKey,
+            task: task,
+            team: project?.people ?? const [],
+          )
+        else
+          TaskReadonlyGrid(task: task),
+        TaskTimeSection(
+          task: task,
+          canLog: mine && !task.isDone,
+          onLog: (h) => _cubit.logTime(task.id, h),
+        ),
+        AttachmentsField(
+          attachments: task.attachments,
+          onAdd: (files) => _cubit.addAttachments(task.id, files),
+          onRemove: (i) => _cubit.removeAttachment(task.id, i),
+        ),
+        if (manage)
+          CustomButton(title: LocaleKeys.common_saveChanges.tr(), onTap: _save),
+        SizedBox(height: 20.h),
+        TaskCommentsThread(task: task, me: _cubit.meId),
+        CommentComposer(
+          controller: _comment,
+          focusNode: _commentFocus,
+          hasError: _commentError,
+          hint: manage &&
+                  (task.status == TaskStatus.review ||
+                      task.status == TaskStatus.test)
+              ? LocaleKeys.tasks_commentOrReturnHint.tr()
+              : LocaleKeys.tasks_commentHint.tr(),
+          onSend: () => _send(task),
+        ),
+        if (_cubit.isAdmin) ...[
+          SizedBox(height: 10.h),
+          CustomButton(
+            title: LocaleKeys.tasks_deleteTask.tr(),
+            type: ButtonStyleType.plain,
+            textColor: AppColors.errorColor.themeColor,
+            onTap: _delete,
+          ),
+        ],
+      ],
     );
   }
 }

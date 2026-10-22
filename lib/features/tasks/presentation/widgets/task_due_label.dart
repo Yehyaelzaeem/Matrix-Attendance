@@ -11,21 +11,25 @@ class TaskDueLabel {
 
   static String text(TaskModel task) {
     if (task.isDone) {
-      return '${AppEmojis.check} ${DateHelper.dayMonth(task.doneAt ?? task.due)}';
+      return '${AppEmojis.check} ${DateHelper.dayMonthOrNotYet(task.doneAt ?? task.due)}';
     }
-    final diff = DateHelper.dayDiff(task.due);
+    final due = task.due;
+    if (due == null) return LocaleKeys.common_notYet.tr();
+    final diff = DateHelper.dayDiff(due);
     if (task.isLate) {
       return LocaleKeys.tasks_lateDays.tr(namedArgs: {'n': '${diff.abs()}'});
     }
     if (diff == 0) return LocaleKeys.common_today.tr();
     if (diff == 1) return LocaleKeys.common_tomorrow.tr();
-    return DateHelper.dayMonth(task.due);
+    return DateHelper.dayMonth(due);
   }
 
   static ChipTone tone(TaskModel task) {
     if (task.isDone) return ChipTone.gray;
     if (task.isLate) return ChipTone.red;
-    return DateHelper.dayDiff(task.due) <= 1 ? ChipTone.orange : ChipTone.gray;
+    final due = task.due;
+    if (due == null) return ChipTone.gray;
+    return DateHelper.dayDiff(due) <= 1 ? ChipTone.orange : ChipTone.gray;
   }
 
   static String hours(double v) =>

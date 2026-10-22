@@ -61,7 +61,8 @@ class TodayTypeRow extends StatelessWidget {
               ),
               AppText(
                 LocaleKeys.attendance_hoursRange.tr(namedArgs: {
-                  'n': '${type.requiredHours}',
+                  'n':
+                      '${day.requiredHours > 0 ? day.requiredHours : type.requiredHours}',
                   'range': type.range,
                 }),
                 fontSize: 12.5,

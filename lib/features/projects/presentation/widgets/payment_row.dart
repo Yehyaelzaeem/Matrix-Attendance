@@ -2,7 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_emojis.dart';
 import '../../../../core/utils/date_helper.dart';
@@ -29,20 +29,20 @@ class PaymentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final payment = project.payments[index];
-    final diff = DateHelper.dayDiff(payment.due);
+    final due = payment.due ?? DateHelper.today();
+    final diff = DateHelper.dayDiff(due);
     final overdue = !payment.paid && diff < 0;
     final muted = AppColors.textSecondaryColor.themeColor;
     final subtitle = payment.paid
-        ? LocaleKeys.projects_paidOn.tr(namedArgs: {
-            'date': DateHelper.dayMonth(payment.paidAt ?? payment.due)
-          })
+        ? LocaleKeys.projects_paidOn
+            .tr(namedArgs: {'date': DateHelper.dayMonth(payment.paidAt ?? due)})
         : overdue
             ? LocaleKeys.projects_overduePayment.tr(namedArgs: {
                 'n': '${diff.abs()}',
-                'date': DateHelper.dayMonth(payment.due),
+                'date': DateHelper.dayMonth(due),
               })
             : LocaleKeys.projects_duePayment
-                    .tr(namedArgs: {'date': DateHelper.dayMonth(payment.due)}) +
+                    .tr(namedArgs: {'date': DateHelper.dayMonth(due)}) +
                 (diff <= 14
                     ? LocaleKeys.projects_dueSoon.tr(namedArgs: {'n': '$diff'})
                     : '');
@@ -103,8 +103,9 @@ class PaymentRow extends StatelessWidget {
                       ? ButtonStyleType.softDanger
                       : ButtonStyleType.ghost,
                   title: LocaleKeys.projects_recordPayment.tr(),
-                  onTap: () =>
-                      getIt<ProjectsCubit>().markPaid(project.id, index),
+                  onTap: () => context
+                      .read<ProjectsCubit>()
+                      .markPaid(project.id, payment.id),
                 ),
               ],
             ],

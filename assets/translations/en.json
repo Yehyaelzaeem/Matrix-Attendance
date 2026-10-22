@@ -57,7 +57,11 @@
     "reason": "Reason",
     "date": "Date",
     "by": "by {name}",
-    "date_separator": ","
+    "date_separator": ",",
+    "minutes_ago": "{n} min ago",
+    "hours_ago": "{n} h ago",
+    "yesterday": "Yesterday",
+    "days_ago": "{n} days ago"
   },
   "validation": {
     "required": "This field is required",
@@ -161,7 +165,9 @@
     "account_activated": "Your account is activated",
     "pass_label": "EMPLOYEE PASS",
     "ribbon": "MATRIX CLOUDS · MATRIX CLOUDS · MATRIX CLOUDS ·",
-    "still_pending": "Your account is still awaiting approval"
+    "still_pending": "Your account is still awaiting approval",
+    "admin_only_note": "Accounts are added by management. If your number isn't registered, contact management.",
+    "otp_sms_chip": "SMS"
   },
   "roles": {
     "employee": "Employee",
@@ -279,7 +285,16 @@
     "wa_pause": "⏸ {name} – paused – {time} – {reason}",
     "wa_resume": "▶️ {name} – back to work – {time} – after {duration} pause ({reason})",
     "wa_check_out": "👋 {name} – checked out – {time} – worked {worked}{pause}",
-    "wa_pause_part": " · paused {duration}"
+    "wa_pause_part": " · paused {duration}",
+    "wa_not_installed": "WhatsApp is not installed on this device",
+    "wa_posted": "💬 Posted to the WhatsApp group",
+    "wa_send_failed": "Couldn't post to the WhatsApp group; attendance was still recorded",
+    "late_permitted": "Late {n} min (with permission)",
+    "location_disabled": "Turn on GPS in your phone settings and try again",
+    "location_denied": "Allow location access to check in",
+    "location_denied_forever": "Location permission is blocked, enable it from settings",
+    "location_failed": "We couldn't get your location, try again",
+    "mock_location": "Mock location isn't allowed, turn off any location spoofing app"
   },
   "board": {
     "title": "Attendance board",
@@ -296,7 +311,13 @@
     "status_out": "Checked out",
     "status_leave": "On leave",
     "tab_paused": "Paused",
-    "empty": "No employees in this list"
+    "empty": "No employees in this list",
+    "note_late": "Late {n} min",
+    "note_late_permitted": "Late {n} min · permitted",
+    "note_paused": "⏸ {reason} · {n} min",
+    "note_worked": "Worked {h}",
+    "note_deficit": "⚠️ {n} min short",
+    "holiday": "Today is an official holiday"
   },
   "requests": {
     "title": "My requests",
@@ -340,7 +361,9 @@
     "sub_swap_home": "From home instead of office",
     "sub_swap_office": "From office instead of home",
     "sub_fix": "{in} – {out}",
-    "sub_schedule": "New weekly schedule"
+    "sub_schedule": "New weekly schedule",
+    "subtitle": "Leaves, permissions and fixes",
+    "pending_badge": "{n} pending"
   },
   "decisions": {
     "title": "Decisions & polls",
@@ -394,7 +417,9 @@
     "poll_private": "🔒 Results and voter names are visible to management only",
     "publish_notify": "Publish & notify",
     "published": "📢 Published and employees were notified",
-    "new_badge": "{n} new"
+    "new_badge": "{n} new",
+    "ends_today": "Ends today",
+    "ended": "Voting ended"
   },
   "tasks": {
     "title": "Tasks",
@@ -497,7 +522,9 @@
     "toast_logged_hours": "⏱ Logged {n} hours",
     "toast_commented": "💬 Sent, {name} will be notified",
     "toast_created": "✓ Task added, {name} will be notified",
-    "toast_deleted": "Task deleted"
+    "toast_deleted": "Task deleted",
+    "reopened_comment": "Reopened",
+    "status_changed_comment": "Status changed"
   },
   "projects": {
     "title": "Projects",
@@ -688,7 +715,12 @@
     "toast_reviewed": "✓ {name}'s report reviewed",
     "toast_all_reviewed": "✓ All marked as reviewed",
     "toast_closed": "🔒 {month} is closed",
-    "toast_reopened": "🔓 The month was reopened"
+    "toast_reopened": "🔓 The month was reopened",
+    "late_count": "Late arrivals",
+    "unexcused": "Unexcused absences",
+    "sub_attendance_api": "Present {a} / {b} · {p}% commitment",
+    "close_open_days": "All open days are closed",
+    "close_blocked": "Some conditions aren't met yet"
   },
   "reviewer": {
     "subtitle": "Review & reports",
@@ -721,7 +753,7 @@
     "not_arrived": "Not in yet",
     "needs_decision": "Needs your decision",
     "pending_requests": "Requests awaiting approval",
-    "pending_requests_sub": "Leaves, permissions, swaps",
+    "pending_requests_sub": "{e} from employees · {r} from reviewers",
     "new_accounts": "New accounts",
     "new_accounts_sub": "Need activation and a schedule",
     "late_tasks": "Overdue tasks",
@@ -801,7 +833,12 @@
     "edit_profile": "Edit details",
     "name": "Name",
     "title": "Title",
-    "profile_saved": "✓ Your details were saved"
+    "profile_saved": "✓ Your details were saved",
+    "all_requests": "All requests",
+    "from_employees": "From employees",
+    "from_reviewers": "From reviewers",
+    "geofence_info_api": "📍 Office radius: {r} m around the office",
+    "hours_info_api": "⏰ Office {o} h · Home {h} h · Day starts {start} · Last check-in {grace}"
   },
   "team": {
     "employees_title": "Employees",
@@ -835,7 +872,27 @@
     "holiday_added": "🎌 Holiday added and everyone was notified",
     "suspend": "Suspend account",
     "suspended_toast": "⛔ Account suspended",
-    "saved_toast": "✓ Saved, {name} will be notified of the new schedule"
+    "saved_toast": "✓ Saved, {name} will be notified of the new schedule",
+    "copied": "📋 Copied: {text}",
+    "cant_open": "Couldn't open this on the device",
+    "mobile": "Mobile",
+    "no_email": "Not added",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "sms": "SMS",
+    "email_action": "Email",
+    "new_employee": "New employee",
+    "login_phone": "Mobile number (used to log in)",
+    "email_hint": "name@matrixclouds.com",
+    "duplicate_name": "This name already exists",
+    "added_toast": "✓ {name} added and can log in with their number now",
+    "add_note": "The employee logs in directly with their number and an OTP, no sign-up. They add their photo from their account.",
+    "add_employee": "Add employee",
+    "activated_toast": "✓ Account reactivated",
+    "device_reset_toast": "✓ Device reset, they can log in from a new device",
+    "activate": "Activate account",
+    "reset_device": "Reset device",
+    "suspended_chip": "Suspended"
   },
   "profile": {
     "phone": "Mobile number",
@@ -859,7 +916,8 @@
     "menu_notifications": "Notifications",
     "menu_device": "Registered device",
     "device_info": "📱 Your account is bound to this device. Contact management to change it",
-    "notifications_info": "🔔 Notifications are on"
+    "notifications_info": "🔔 Notifications are on",
+    "device_api": "📱 {model} · {platform} · bound since {date}"
   },
   "settings": {
     "language": "Language",
@@ -872,6 +930,14 @@
     "unauthorized": "Session expired, please log in again",
     "not_found": "Nothing here",
     "generic": "Something went wrong, try again",
-    "page_not_found": "Page not found"
+    "page_not_found": "Page not found",
+    "timeout": "The request timed out, try again",
+    "no_internet": "No internet connection"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "unread_sub": "{n} unread",
+    "all_read": "All caught up",
+    "empty": "No notifications yet"
   }
 }

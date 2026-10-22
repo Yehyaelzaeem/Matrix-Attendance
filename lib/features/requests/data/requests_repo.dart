@@ -1,57 +1,42 @@
-import '../../../core/utils/app_constants.dart';
+import '../../../core/models/paginated.dart';
+import '../../../core/network/api_endpoints.dart';
+import '../../../core/network/api_handler.dart';
+import '../../../core/network/dio_client.dart';
+import '../../../core/utils/json_reader.dart';
 import 'models/request_model.dart';
 
-class RequestsRepo {
-  final List<RequestModel> _mine = [
-    const RequestModel(
-      id: 'r1',
-      type: RequestType.swap,
-      title: 'الأحد 4 أكتوبر من البيت',
-      subtitle: 'بدل الشركة',
-      status: RequestStatus.pending,
-      reason: 'عندي صيانة في البيت ومحتاج أبقى موجود.',
-      when: 'من ساعتين',
-    ),
-    const RequestModel(
-      id: 'r2',
-      type: RequestType.late,
-      title: 'إذن تأخير – الخميس',
-      subtitle: 'الحضور 11:30',
-      status: RequestStatus.approved,
-      reason: 'مشوار في المرور لتجديد الرخصة.',
-      when: 'من 3 أيام',
-      decidedBy: 'أ. يوسف',
-    ),
-    const RequestModel(
-      id: 'r3',
-      type: RequestType.leave,
-      title: 'إجازة 3 أيام',
-      subtitle: '12 – 14 أكتوبر',
-      status: RequestStatus.rejected,
-      reason: 'ظروف عائلية.',
-      when: 'من أسبوع',
-      rejectReason: 'التاريخ ده وقت تسليم مشروع INJOX، ممكن نأجلها أسبوع؟',
-    ),
-    const RequestModel(
-      id: 'r4',
-      type: RequestType.fix,
-      title: 'تعديل انصراف – الاثنين',
-      subtitle: 'الانصراف الفعلي 5:10',
-      status: RequestStatus.approved,
-      reason: 'نسيت أعمل Check-out.',
-      when: 'من أسبوعين',
-      decidedBy: 'المراجع',
-    ),
-  ];
+class RequestsRepo with ApiHandler {
+  RequestsRepo({required DioClient dio}) : _dio = dio;
 
-  Future<List<RequestModel>> getMyRequests() async {
-    await Future.delayed(AppConstants.mockLatency);
-    return List.unmodifiable(_mine);
-  }
+  final DioClient _dio;
 
-  Future<RequestModel> submit(RequestModel request) async {
-    await Future.delayed(AppConstants.mockLatency);
-    _mine.insert(0, request);
-    return request;
-  }
+  Future<(Paginated<RequestModel>, RequestSummary)> getMyRequests({
+    RequestStatus? status,
+    int page = 1,
+  }) =>
+      guard(() async {
+        final data =
+            dataOf(await _dio.get(ApiEndpoints.requests, queryParameters: {
+          'page': page,
+          if (status != null) 'status': status.name,
+        }));
+        return (
+          Paginated.fromData(data, 'requests', RequestModel.fromJson),
+          RequestSummary.fromJson(data['summary']),
+        );
+      });
+
+  Future<RequestModel> submit({
+    required RequestType type,
+    required String reason,
+    required Map<String, dynamic> payload,
+  }) =>
+      guard(() async {
+        final data = dataOf(await _dio.post(ApiEndpoints.requests, data: {
+          'type': type.key,
+          'reason': reason,
+          'payload': payload,
+        }));
+        return RequestModel.fromJson(JsonReader.map(data['request']));
+      });
 }

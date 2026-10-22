@@ -16,49 +16,42 @@ final class ReportsLoading extends ReportsState {
 }
 
 final class ReportsSuccess extends ReportsState {
-  final List<EmployeeReport> reports;
-  final Set<String> reviewed;
-  final bool currentClosed;
+  final ReportBoard board;
   final bool viewingPrevious;
-  final ReportMode mode;
-  final bool sortDesc;
+  final bool refreshing;
 
   const ReportsSuccess({
-    required this.reports,
-    required this.reviewed,
-    this.currentClosed = false,
+    required this.board,
     this.viewingPrevious = false,
-    this.mode = ReportMode.attendance,
-    this.sortDesc = true,
+    this.refreshing = false,
   });
 
-  bool get isLocked => currentClosed || viewingPrevious;
+  ReportMode get mode => board.mode;
 
-  bool isReviewed(String name) => isLocked || reviewed.contains(name);
+  List<ReportPerson> get people => board.people;
 
-  int get reviewedCount => currentClosed ? reports.length : reviewed.length;
+  bool get isLocked => board.closed;
 
-  bool get allReviewed => reviewedCount >= reports.length;
+  bool get currentClosed => !viewingPrevious && board.closed;
 
-  ReportsSuccess copyWith({
-    Set<String>? reviewed,
-    bool? currentClosed,
-    bool? viewingPrevious,
-    ReportMode? mode,
-    bool? sortDesc,
-  }) =>
+  int get reviewedCount => board.reviewedDone;
+
+  int get total => board.reviewedTotal;
+
+  bool get allReviewed => board.allReviewed;
+
+  bool isReviewed(int userId) =>
+      isLocked || people.any((p) => p.userId == userId && p.reviewed);
+
+  ReportsSuccess copyWith({ReportBoard? board, bool? refreshing}) =>
       ReportsSuccess(
-        reports: reports,
-        reviewed: reviewed ?? this.reviewed,
-        currentClosed: currentClosed ?? this.currentClosed,
-        viewingPrevious: viewingPrevious ?? this.viewingPrevious,
-        mode: mode ?? this.mode,
-        sortDesc: sortDesc ?? this.sortDesc,
+        board: board ?? this.board,
+        viewingPrevious: viewingPrevious,
+        refreshing: refreshing ?? this.refreshing,
       );
 
   @override
-  List<Object?> get props =>
-      [reports, reviewed, currentClosed, viewingPrevious, mode, sortDesc];
+  List<Object?> get props => [board, viewingPrevious, refreshing];
 }
 
 final class ReportsError extends ReportsState {

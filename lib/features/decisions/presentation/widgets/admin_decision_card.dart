@@ -1,14 +1,15 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
 import '../../../../core/widgets/meter_bar.dart';
 import '../../../requests/presentation/widgets/reason_box.dart';
+import '../../../catalog/logic/catalog_cubit.dart';
 import '../../data/models/decision_model.dart';
 import '../../logic/decisions_cubit.dart';
 import 'decision_card_frame.dart';
@@ -52,7 +53,7 @@ class AdminDecisionCard extends StatelessWidget {
             type: ButtonStyleType.ghost,
             height: 42,
             fontSize: 13.5,
-            onTap: () => getIt<DecisionsCubit>().remind(d),
+            onTap: () => context.read<DecisionsCubit>().remind(d),
           ),
         ]);
       }
@@ -62,7 +63,8 @@ class AdminDecisionCard extends StatelessWidget {
       child: DecisionCardFrame(
         decision: d,
         showAudience: true,
-        footerStart: d.audience.sentTo,
+        footerStart:
+            d.audience.sentTo(context.watch<CatalogCubit>().state.categoryName),
         children: children,
       ),
     );

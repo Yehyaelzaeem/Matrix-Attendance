@@ -57,7 +57,11 @@
     "reason": "السبب",
     "date": "التاريخ",
     "by": "بواسطة {name}",
-    "date_separator": "،"
+    "date_separator": "،",
+    "minutes_ago": "من {n} دقيقة",
+    "hours_ago": "من {n} ساعة",
+    "yesterday": "امبارح",
+    "days_ago": "من {n} أيام"
   },
   "validation": {
     "required": "هذا الحقل مطلوب",
@@ -161,7 +165,9 @@
     "account_activated": "تم تفعيل حسابك",
     "pass_label": "EMPLOYEE PASS",
     "ribbon": "MATRIX CLOUDS · MATRIX CLOUDS · MATRIX CLOUDS ·",
-    "still_pending": "حسابك لسه في انتظار موافقة الإدارة"
+    "still_pending": "حسابك لسه في انتظار موافقة الإدارة",
+    "admin_only_note": "الحسابات بتضيفها الإدارة. لو رقمك مش مسجّل، كلّم الإدارة.",
+    "otp_sms_chip": "SMS"
   },
   "roles": {
     "employee": "موظف",
@@ -279,7 +285,16 @@
     "wa_pause": "⏸ {name} – إيقاف مؤقت – {time} – {reason}",
     "wa_resume": "▶️ {name} – رجع للشغل – {time} – بعد إيقاف {duration} ({reason})",
     "wa_check_out": "👋 {name} – انصراف – {time} – اشتغل {worked}{pause}",
-    "wa_pause_part": " · إيقاف {duration}"
+    "wa_pause_part": " · إيقاف {duration}",
+    "wa_not_installed": "واتساب مش متثبّت على الجهاز",
+    "wa_posted": "💬 اتبعت على جروب الواتساب",
+    "wa_send_failed": "مقدرناش نبعت لجروب الواتساب، الحضور اتسجل عادي",
+    "late_permitted": "متأخر {n} دقيقة (بإذن)",
+    "location_disabled": "فعّل الـ GPS من إعدادات الموبايل وجرّب تاني",
+    "location_denied": "لازم تسمح للتطبيق يوصل لموقعك عشان تسجل حضور",
+    "location_denied_forever": "إذن الموقع مقفول، افتح الإعدادات واسمح للتطبيق بالوصول للموقع",
+    "location_failed": "مقدرناش نحدد موقعك، جرّب تاني",
+    "mock_location": "الموقع الوهمي مش مسموح، اقفل أي تطبيق بيغيّر الموقع"
   },
   "board": {
     "title": "لوحة الحضور",
@@ -296,7 +311,13 @@
     "status_out": "انصرف",
     "status_leave": "إجازة",
     "tab_paused": "متوقف",
-    "empty": "مفيش موظفين في القائمة دي"
+    "empty": "مفيش موظفين في القائمة دي",
+    "note_late": "متأخر {n} د",
+    "note_late_permitted": "متأخر {n} د · بإذن",
+    "note_paused": "⏸ {reason} · من {n} د",
+    "note_worked": "اشتغل {h}",
+    "note_deficit": "⚠️ ناقص {n} د",
+    "holiday": "النهارده إجازة رسمية"
   },
   "requests": {
     "title": "طلباتي",
@@ -340,7 +361,9 @@
     "sub_swap_home": "من البيت بدل الشركة",
     "sub_swap_office": "من الشركة بدل البيت",
     "sub_fix": "{in} – {out}",
-    "sub_schedule": "جدول أسبوعي جديد"
+    "sub_schedule": "جدول أسبوعي جديد",
+    "subtitle": "إجازات وأذونات وتعديلات",
+    "pending_badge": "{n} قيد المراجعة"
   },
   "decisions": {
     "title": "القرارات والتصويت",
@@ -394,7 +417,9 @@
     "poll_private": "🔒 النتيجة وأسماء المصوتين بتظهر للإدارة بس",
     "publish_notify": "نشر وإرسال إشعار",
     "published": "📢 اتنشر، ووصل إشعار للموظفين",
-    "new_badge": "{n} جديد"
+    "new_badge": "{n} جديد",
+    "ends_today": "بينتهي النهارده",
+    "ended": "التصويت انتهى"
   },
   "tasks": {
     "title": "التسكات",
@@ -497,7 +522,9 @@
     "toast_logged_hours": "⏱ اتسجل {n} ساعة",
     "toast_commented": "💬 اتبعت، و{name} هيوصله إشعار",
     "toast_created": "✓ اتضاف التسك و{name} هيوصله إشعار",
-    "toast_deleted": "اتمسح التسك"
+    "toast_deleted": "اتمسح التسك",
+    "reopened_comment": "اتفتحت تاني",
+    "status_changed_comment": "تعديل الحالة"
   },
   "projects": {
     "title": "المشاريع",
@@ -688,7 +715,12 @@
     "toast_reviewed": "✓ اتراجع تقرير {name}",
     "toast_all_reviewed": "✓ اتعلّم الكل كمراجَع",
     "toast_closed": "🔒 شهر {month} اتقفل",
-    "toast_reopened": "🔓 الشهر اتفتح تاني"
+    "toast_reopened": "🔓 الشهر اتفتح تاني",
+    "late_count": "مرات تأخير",
+    "unexcused": "غياب بدون إذن",
+    "sub_attendance_api": "حضور {a} / {b} · التزام {p}%",
+    "close_open_days": "كل الأيام المفتوحة اتقفلت",
+    "close_blocked": "لسه في شروط مش مكتملة، كمّلها الأول"
   },
   "reviewer": {
     "subtitle": "المراجعة والتقارير",
@@ -721,7 +753,7 @@
     "not_arrived": "لسه مجوش",
     "needs_decision": "محتاج قرارك",
     "pending_requests": "طلبات في انتظار الموافقة",
-    "pending_requests_sub": "إجازات، أذونات، تبديل مكان",
+    "pending_requests_sub": "{e} من موظفين · {r} من مراجعين",
     "new_accounts": "حسابات جديدة",
     "new_accounts_sub": "محتاجة تفعيل وتحديد جدول",
     "late_tasks": "تسكات متأخرة عن ميعادها",
@@ -801,7 +833,12 @@
     "edit_profile": "تعديل البيانات",
     "name": "الاسم",
     "title": "المسمى",
-    "profile_saved": "✓ اتحفظت بياناتك"
+    "profile_saved": "✓ اتحفظت بياناتك",
+    "all_requests": "كل الطلبات",
+    "from_employees": "من موظفين",
+    "from_reviewers": "من مراجعين",
+    "geofence_info_api": "📍 نطاق الشركة: {r} متر حوالين المكتب",
+    "hours_info_api": "⏰ الشركة {o} س · البيت {h} س · بداية اليوم {start} · آخر حضور {grace}"
   },
   "team": {
     "employees_title": "الموظفين",
@@ -835,7 +872,27 @@
     "holiday_added": "🎌 اتضافت الإجازة واتبعت إشعار للكل",
     "suspend": "إيقاف الحساب",
     "suspended_toast": "⛔ اتوقف الحساب مؤقتاً",
-    "saved_toast": "✓ اتحفظ، و{name} هيوصله إشعار بالجدول الجديد"
+    "saved_toast": "✓ اتحفظ، و{name} هيوصله إشعار بالجدول الجديد",
+    "copied": "📋 اتنسخ: {text}",
+    "cant_open": "مش قادر يفتح التطبيق ده على الجهاز",
+    "mobile": "الموبايل",
+    "no_email": "لم يُضف",
+    "call": "اتصال",
+    "whatsapp": "واتساب",
+    "sms": "رسالة",
+    "email_action": "إيميل",
+    "new_employee": "موظف جديد",
+    "login_phone": "رقم الموبايل (هيسجل دخول بيه)",
+    "email_hint": "name@matrixclouds.com",
+    "duplicate_name": "الاسم ده موجود قبل كده",
+    "added_toast": "✓ اتضاف {name}، ويقدر يدخل برقمه دلوقتي",
+    "add_note": "الموظف هيدخل برقمه وكود OTP على طول، من غير تسجيل. صورته بيضيفها من حسابه.",
+    "add_employee": "إضافة الموظف",
+    "activated_toast": "✓ الحساب اتفعّل تاني",
+    "device_reset_toast": "✓ اتعمل reset للجهاز، يقدر يسجل من جهاز جديد",
+    "activate": "تفعيل الحساب",
+    "reset_device": "إعادة تعيين الجهاز",
+    "suspended_chip": "موقوف"
   },
   "profile": {
     "phone": "رقم الموبايل",
@@ -859,7 +916,8 @@
     "menu_notifications": "الإشعارات",
     "menu_device": "الجهاز المسجّل",
     "device_info": "📱 الحساب مربوط بالجهاز ده، ولو غيّرته كلّم الإدارة",
-    "notifications_info": "🔔 الإشعارات شغالة"
+    "notifications_info": "🔔 الإشعارات شغالة",
+    "device_api": "📱 {model} · {platform} · مربوط من {date}"
   },
   "settings": {
     "language": "اللغة",
@@ -872,6 +930,14 @@
     "unauthorized": "انتهت الجلسة، يرجى تسجيل الدخول مجدداً",
     "not_found": "مفيش بيانات",
     "generic": "حصلت مشكلة، جرّب تاني",
-    "page_not_found": "الصفحة مش موجودة"
+    "page_not_found": "الصفحة مش موجودة",
+    "timeout": "الاتصال اتأخر، جرّب تاني",
+    "no_internet": "مفيش اتصال بالإنترنت"
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "unread_sub": "{n} غير مقروء",
+    "all_read": "كله مقروء",
+    "empty": "مفيش إشعارات لسه"
   }
 }

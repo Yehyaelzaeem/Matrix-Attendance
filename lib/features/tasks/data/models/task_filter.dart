@@ -8,29 +8,29 @@ class TaskFilter extends Equatable {
   const TaskFilter({
     this.status,
     this.projectId,
-    this.assignee,
+    this.assigneeId,
     this.due = DueFilter.all,
     this.query = '',
   });
 
   final TaskStatus? status;
-  final String? projectId;
-  final String? assignee;
+  final int? projectId;
+  final int? assigneeId;
   final DueFilter due;
   final String query;
 
   bool get hasExtraFilters =>
       projectId != null ||
-      assignee != null ||
+      assigneeId != null ||
       due != DueFilter.all ||
       query.isNotEmpty;
 
   TaskFilter copyWith({
     TaskStatus? status,
     bool clearStatus = false,
-    String? projectId,
+    int? projectId,
     bool clearProject = false,
-    String? assignee,
+    int? assigneeId,
     bool clearAssignee = false,
     DueFilter? due,
     String? query,
@@ -38,7 +38,7 @@ class TaskFilter extends Equatable {
       TaskFilter(
         status: clearStatus ? null : (status ?? this.status),
         projectId: clearProject ? null : (projectId ?? this.projectId),
-        assignee: clearAssignee ? null : (assignee ?? this.assignee),
+        assigneeId: clearAssignee ? null : (assigneeId ?? this.assigneeId),
         due: due ?? this.due,
         query: query ?? this.query,
       );
@@ -46,37 +46,40 @@ class TaskFilter extends Equatable {
   TaskFilter cleared() => TaskFilter(status: status);
 
   bool _dueMatches(TaskModel t) {
-    final diff = DateHelper.dayDiff(t.due);
+    final due = t.due;
+    if (this.due == DueFilter.all) return true;
+    if (this.due == DueFilter.late) return t.isLate;
+    if (due == null) return false;
+    final diff = DateHelper.dayDiff(due);
     final today = DateHelper.today();
-    return switch (due) {
-      DueFilter.all => true,
-      DueFilter.late => t.isLate,
+    return switch (this.due) {
       DueFilter.today => diff == 0 && !t.isDone,
       DueFilter.week => diff >= 0 && diff <= 7,
-      DueFilter.month => t.due.year == today.year && t.due.month == today.month,
+      DueFilter.month => due.year == today.year && due.month == today.month,
+      _ => true,
     };
   }
 
-  bool matches(TaskModel t,
-      {required String Function(String id) projectName,
-      bool ignoreStatus = false}) {
+  bool matches(TaskModel t, {bool ignoreStatus = false}) {
     final q = query.trim().toLowerCase();
     return (ignoreStatus || status == null || t.status == status) &&
         (projectId == null || t.projectId == projectId) &&
-        (assignee == null || t.assignee == assignee) &&
+        (assigneeId == null || t.assigneeId == assigneeId) &&
         _dueMatches(t) &&
         (q.isEmpty ||
             t.title.toLowerCase().contains(q) ||
             t.assignee.contains(q) ||
-            projectName(t.projectId).toLowerCase().contains(q));
+            t.projectName.toLowerCase().contains(q));
   }
 
   static int sort(TaskModel a, TaskModel b) {
     if (a.isDone != b.isDone) return a.isDone ? 1 : -1;
-    if (a.isDone) return (b.doneAt ?? b.due).compareTo(a.doneAt ?? a.due);
-    return a.due.compareTo(b.due);
+    if (a.isDone) {
+      return (b.doneAt ?? b.dueOrFar).compareTo(a.doneAt ?? a.dueOrFar);
+    }
+    return a.dueOrFar.compareTo(b.dueOrFar);
   }
 
   @override
-  List<Object?> get props => [status, projectId, assignee, due, query];
+  List<Object?> get props => [status, projectId, assigneeId, due, query];
 }

@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text.dart';
@@ -19,6 +19,7 @@ class ReopenMonthSheet extends StatefulWidget {
 
 class _ReopenMonthSheetState extends State<ReopenMonthSheet> {
   final _reason = TextEditingController();
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -47,9 +48,18 @@ class _ReopenMonthSheetState extends State<ReopenMonthSheet> {
         CustomButton(
           title: LocaleKeys.reports_reopenButton.tr(),
           enabled: _reason.text.trim().length >= 5,
-          onTap: () {
-            getIt<ReportsCubit>().reopenMonth(_reason.text.trim());
-            Navigator.of(context).pop();
+          loading: _loading,
+          onTap: () async {
+            setState(() => _loading = true);
+            final navigator = Navigator.of(context);
+            final ok = await context
+                .read<ReportsCubit>()
+                .reopenMonth(_reason.text.trim());
+            if (ok) {
+              navigator.pop();
+            } else if (mounted) {
+              setState(() => _loading = false);
+            }
           },
         ),
       ],

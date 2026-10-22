@@ -111,6 +111,9 @@ class AppColors {
   static const ColorModel authTopColor = ColorModel.same(Color(0xffeaf1ff));
   static const ColorModel authMiddleColor = ColorModel.same(Color(0xfff4f8ff));
   static const ColorModel meshDotColor = ColorModel.same(Color(0xffc7d7f5));
+  static const ColorModel deviceFrameColor = ColorModel.same(Color(0xff0b1220));
+  static const ColorModel otpSenderLineColor =
+      ColorModel.same(Color(0xffdfe6f3));
   static const ColorModel headerTextColor = ColorModel.same(Color(0xffbcd3ff));
   static const ColorModel infoTextColor = ColorModel.same(Color(0xff27447d));
 

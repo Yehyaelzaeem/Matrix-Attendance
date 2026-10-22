@@ -18,6 +18,9 @@ enum TaskStatus {
   final ChipTone tone;
   final String emoji;
 
+  static TaskStatus fromKey(String? key) => TaskStatus.values
+      .firstWhere((e) => e.name == key, orElse: () => TaskStatus.todo);
+
   String get label => switch (this) {
         TaskStatus.todo => LocaleKeys.tasks_statusTodo.tr(),
         TaskStatus.doing => LocaleKeys.tasks_statusDoing.tr(),
@@ -44,6 +47,9 @@ enum TaskPriority {
 
   final ChipTone tone;
 
+  static TaskPriority fromKey(String? key) => TaskPriority.values
+      .firstWhere((e) => e.name == key, orElse: () => TaskPriority.med);
+
   String get label => switch (this) {
         TaskPriority.high => LocaleKeys.tasks_priorityHigh.tr(),
         TaskPriority.med => LocaleKeys.tasks_priorityMed.tr(),
@@ -51,9 +57,26 @@ enum TaskPriority {
       };
 }
 
-enum CommentKind { comment, returned, system }
+enum CommentKind {
+  comment,
+  returned,
+  system;
 
-enum AttachmentType { image, video, doc }
+  static CommentKind fromKey(String? key) => switch (key) {
+        'return' => CommentKind.returned,
+        'system' => CommentKind.system,
+        _ => CommentKind.comment,
+      };
+}
+
+enum AttachmentType {
+  image,
+  video,
+  doc;
+
+  static AttachmentType fromKey(String? key) => AttachmentType.values
+      .firstWhere((e) => e.name == key, orElse: () => AttachmentType.doc);
+}
 
 enum DueFilter { all, late, today, week, month }
 

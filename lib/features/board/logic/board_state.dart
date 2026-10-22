@@ -29,8 +29,9 @@ final class BoardSuccess extends BoardState {
 
 final class BoardError extends BoardState {
   final String message;
-  const BoardError(this.message);
+  final int daysAgo;
+  const BoardError(this.message, this.daysAgo);
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, daysAgo];
 }

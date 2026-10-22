@@ -15,17 +15,17 @@ class EmployeeProjectRow extends StatelessWidget {
   const EmployeeProjectRow({
     super.key,
     required this.project,
-    required this.name,
+    required this.userId,
     required this.isLast,
   });
 
   final ProjectModel project;
-  final String name;
+  final int userId;
   final bool isLast;
 
   @override
   Widget build(BuildContext context) {
-    final role = project.member(name)?.role ?? '';
+    final role = project.member(userId)?.role ?? '';
     return GestureDetector(
       onTap: () => context.pushNamed(Routes.projectDetailsScreen,
           arguments: {'projectId': project.id}),
@@ -48,7 +48,7 @@ class EmployeeProjectRow extends StatelessWidget {
                 children: [
                   AppText(project.name, fontWeight: FontWeight.w700),
                   AppText(
-                    project.manager == name
+                    project.managerId == userId
                         ? '$role${LocaleKeys.team_managerTag.tr()}'
                         : role,
                     fontSize: 11.5,

@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/fade_slide_in.dart';
@@ -28,7 +28,8 @@ class DecisionCard extends StatelessWidget {
               title: LocaleKeys.decisions_ack.tr(),
               height: 46,
               fontSize: 14.5,
-              onTap: () => getIt<DecisionsCubit>().acknowledge(decision.id),
+              onTap: () =>
+                  context.read<DecisionsCubit>().acknowledge(decision.id),
             ),
       DecisionKind.poll => decision.vote != null
           ? InfoBox(

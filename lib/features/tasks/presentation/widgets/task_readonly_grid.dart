@@ -19,7 +19,11 @@ class TaskReadonlyGrid extends StatelessWidget {
     final items = [
       (LocaleKeys.tasks_assignee.tr(), task.assignee, false),
       (LocaleKeys.tasks_priority.tr(), task.priority.label, false),
-      (LocaleKeys.tasks_dueDate.tr(), DateHelper.dayMonth(task.due), false),
+      (
+        LocaleKeys.tasks_dueDate.tr(),
+        DateHelper.dayMonthOrNotYet(task.due),
+        false
+      ),
       (
         LocaleKeys.tasks_estimateShort.tr(),
         LocaleKeys.common_hourCount

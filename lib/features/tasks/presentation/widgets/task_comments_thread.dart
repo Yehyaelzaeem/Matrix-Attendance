@@ -12,7 +12,7 @@ class TaskCommentsThread extends StatelessWidget {
   const TaskCommentsThread({super.key, required this.task, required this.me});
 
   final TaskModel task;
-  final String me;
+  final int me;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +34,8 @@ class TaskCommentsThread extends StatelessWidget {
           for (final comment in task.comments)
             Padding(
               padding: EdgeInsets.only(bottom: 12.h),
-              child: CommentBubble(comment: comment, isMine: comment.by == me),
+              child:
+                  CommentBubble(comment: comment, isMine: comment.byId == me),
             ),
       ],
     );

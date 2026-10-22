@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_emojis.dart';
 import '../../../../core/utils/locale_keys.dart';
@@ -43,8 +43,9 @@ class _PauseSheetState extends State<PauseSheet> {
 
   Future<void> _submit() async {
     setState(() => _loading = true);
-    final day =
-        await getIt<AttendanceCubit>().pause(_reason!, _note.text.trim());
+    final day = await context
+        .read<AttendanceCubit>()
+        .pause(_reason!, _note.text.trim());
     if (!mounted) return;
     setState(() {
       _loading = false;

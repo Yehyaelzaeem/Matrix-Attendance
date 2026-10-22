@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../app/router/routes.dart';
-import '../../../../core/di/injection.dart';
 import '../../../../core/extensions/extensions.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_emojis.dart';
@@ -20,9 +19,8 @@ class PinnedDecisionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cubit = getIt<DecisionsCubit>();
+    final cubit = context.read<DecisionsCubit>();
     return BlocBuilder<DecisionsCubit, DecisionsState>(
-      bloc: cubit,
       builder: (context, state) {
         if (state is! DecisionsSuccess) return const SizedBox.shrink();
         final pinned = state.pinned;

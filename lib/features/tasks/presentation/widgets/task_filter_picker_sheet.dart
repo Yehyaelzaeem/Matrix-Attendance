@@ -2,7 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_emojis.dart';
 import '../../../../core/utils/locale_keys.dart';
@@ -10,7 +10,7 @@ import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/widgets/app_text.dart';
 import '../../../../core/widgets/option_tile.dart';
 import '../../../projects/logic/projects_cubit.dart';
-import '../../../team/logic/team_cubit.dart';
+import '../../logic/tasks_cubit.dart';
 import '../../data/models/task_enums.dart';
 import '../../data/models/task_filter.dart';
 import 'project_dot.dart';
@@ -67,23 +67,30 @@ class TaskFilterPickerSheet extends StatelessWidget {
         add(LocaleKeys.tasks_allProjects.tr(),
             filter.copyWith(clearProject: true), filter.projectId == null,
             emoji: AppEmojis.folder);
-        for (final p in getIt<ProjectsCubit>().projects) {
-          add(p.name, filter.copyWith(projectId: p.id),
-              filter.projectId == p.id,
+        final projects = context.read<ProjectsCubit>();
+        for (final p in context.read<TasksCubit>().projectNames.entries) {
+          add(p.value, filter.copyWith(projectId: p.key),
+              filter.projectId == p.key,
               leading: SizedBox(
                 width: 38.r,
                 height: 38.r,
-                child: Center(child: ProjectDot(color: p.color, size: 12)),
+                child: Center(
+                    child:
+                        ProjectDot(color: projects.colorOf(p.key), size: 12)),
               ));
         }
       case TaskFilterKind.assignee:
         add(LocaleKeys.tasks_allEmployees.tr(),
-            filter.copyWith(clearAssignee: true), filter.assignee == null,
+            filter.copyWith(clearAssignee: true), filter.assigneeId == null,
             emoji: AppEmojis.users);
-        for (final e in getIt<TeamCubit>().employees) {
-          add(e.name, filter.copyWith(assignee: e.name),
-              filter.assignee == e.name,
-              leading: AppAvatar(name: e.name, size: 38, radius: 12));
+        for (final e in context.read<TasksCubit>().assignees.entries) {
+          add(e.value.name, filter.copyWith(assigneeId: e.key),
+              filter.assigneeId == e.key,
+              leading: AppAvatar(
+                  name: e.value.name,
+                  imagePath: e.value.image,
+                  size: 38,
+                  radius: 12));
         }
       case TaskFilterKind.due:
         for (final d in DueFilter.values) {

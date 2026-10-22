@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/models/day_type.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/date_helper.dart';
@@ -32,7 +32,8 @@ class _NewRequestSheetState extends State<NewRequestSheet> {
   late RequestFormValues _values = RequestFormValues(
     from: DateHelper.today(),
     to: DateHelper.today(),
-    schedule: getIt<AttendanceCubit>().overview?.schedule ?? kDefaultSchedule,
+    schedule:
+        context.read<AttendanceCubit>().overview?.schedule ?? kDefaultSchedule,
   );
   bool _loading = false;
 
@@ -42,40 +43,37 @@ class _NewRequestSheetState extends State<NewRequestSheet> {
     super.dispose();
   }
 
-  String _subtitle(RequestType type) {
+  Map<String, dynamic> _payload(RequestType type) {
     final v = _values;
+    final date = DateHelper.iso(v.from);
     String time(TimeOfDay t) =>
         DateHelper.time24(DateTime(0, 1, 1, t.hour, t.minute));
     return switch (type) {
-      RequestType.leave => LocaleKeys.requests_subUntil
-          .tr(namedArgs: {'date': DateHelper.dayMonth(v.to)}),
-      RequestType.absence => LocaleKeys.common_dash.tr(),
-      RequestType.swap => v.swapToHome
-          ? LocaleKeys.requests_subSwapHome.tr()
-          : LocaleKeys.requests_subSwapOffice.tr(),
-      RequestType.late =>
-        LocaleKeys.requests_subTime.tr(namedArgs: {'time': time(v.arrive)}),
-      RequestType.early =>
-        LocaleKeys.requests_subTime.tr(namedArgs: {'time': time(v.leave)}),
-      RequestType.fix => LocaleKeys.requests_subFix
-          .tr(namedArgs: {'in': time(v.actualIn), 'out': time(v.actualOut)}),
-      RequestType.schedule => LocaleKeys.requests_subSchedule.tr(),
+      RequestType.leave => {'from': date, 'to': DateHelper.iso(v.to)},
+      RequestType.absence => {'date': date},
+      RequestType.swap => {
+          'date': date,
+          'direction': v.swapToHome ? 'office_to_home' : 'home_to_office',
+        },
+      RequestType.late => {'date': date, 'time': time(v.arrive)},
+      RequestType.early => {'date': date, 'time': time(v.leave)},
+      RequestType.fix => {
+          'date': date,
+          'actual_in': time(v.actualIn),
+          'actual_out': time(v.actualOut),
+        },
+      RequestType.schedule => {'schedule': scheduleToJson(v.schedule)},
     };
   }
 
   Future<void> _send() async {
     final type = _type!;
     setState(() => _loading = true);
-    final ok = await getIt<RequestsCubit>().submit(
-      type: type,
-      title: LocaleKeys.requests_titleFormat.tr(namedArgs: {
-        'type': type.label,
-        'day': DateHelper.dayName(DateHelper.weekIndex(_values.from)),
-        'date': DateHelper.dayMonth(_values.from),
-      }),
-      subtitle: _subtitle(type),
-      reason: _reason.text.trim(),
-    );
+    final ok = await context.read<RequestsCubit>().submit(
+          type: type,
+          reason: _reason.text.trim(),
+          payload: _payload(type),
+        );
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pop();

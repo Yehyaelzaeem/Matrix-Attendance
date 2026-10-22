@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/locale_keys.dart';
 import '../../../../core/widgets/app_button.dart';
@@ -13,7 +13,7 @@ import '../../logic/decisions_cubit.dart';
 class PollVoteBox extends StatefulWidget {
   const PollVoteBox({super.key, required this.decisionId});
 
-  final String decisionId;
+  final int decisionId;
 
   @override
   State<PollVoteBox> createState() => _PollVoteBoxState();
@@ -22,6 +22,7 @@ class PollVoteBox extends StatefulWidget {
 class _PollVoteBoxState extends State<PollVoteBox> {
   final _comment = TextEditingController();
   bool? _agree;
+  bool _sending = false;
 
   @override
   void dispose() {
@@ -84,8 +85,14 @@ class _PollVoteBoxState extends State<PollVoteBox> {
           height: 46,
           fontSize: 14.5,
           enabled: _agree != null,
-          onTap: () => getIt<DecisionsCubit>()
-              .vote(widget.decisionId, _agree!, _comment.text.trim()),
+          loading: _sending,
+          onTap: () async {
+            setState(() => _sending = true);
+            await context
+                .read<DecisionsCubit>()
+                .vote(widget.decisionId, _agree!, _comment.text.trim());
+            if (mounted) setState(() => _sending = false);
+          },
         ),
       ],
     );

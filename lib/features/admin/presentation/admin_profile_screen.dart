@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../core/di/injection.dart';
 import '../../../core/utils/app_colors.dart';
 import '../../../core/utils/locale_keys.dart';
 import '../../../core/utils/validators.dart';
@@ -87,7 +86,7 @@ class AdminProfileScreen extends StatelessWidget {
                   ),
                   KeyValueRow(
                     label: LocaleKeys.admin_followedProjects.tr(),
-                    value: '${getIt<ProjectsCubit>().projects.length}',
+                    value: '${context.watch<ProjectsCubit>().projects.length}',
                     numeric: true,
                   ),
                   KeyValueRow(

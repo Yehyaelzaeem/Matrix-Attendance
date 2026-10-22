@@ -13,12 +13,12 @@ class PhoneInputField extends StatelessWidget {
     super.key,
     required this.controller,
     required this.hint,
-    required this.onChanged,
+    this.onChanged,
   });
 
   final TextEditingController controller;
   final String hint;
-  final ValueChanged<String> onChanged;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {

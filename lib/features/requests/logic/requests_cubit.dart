@@ -2,6 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/models/paginated.dart';
+import '../../../core/network/network_exceptions.dart';
 import '../../../core/utils/app_overlay.dart';
 import '../../../core/utils/locale_keys.dart';
 import '../data/models/request_model.dart';
@@ -14,42 +16,70 @@ class RequestsCubit extends Cubit<RequestsState> {
 
   final RequestsRepo _repo;
 
+  RequestStatus? get filter => switch (state) {
+        RequestsLoading s => s.filter,
+        RequestsSuccess s => s.filter,
+        RequestsError s => s.filter,
+        _ => null,
+      };
+
+  int get pendingCount =>
+      state is RequestsSuccess ? (state as RequestsSuccess).summary.pending : 0;
+
   Future<void> load() async {
-    if (state is RequestsSuccess) return;
-    emit(const RequestsLoading());
+    if (state is RequestsSuccess || state is RequestsLoading) return;
+    await setFilter(null);
+  }
+
+  Future<void> setFilter(RequestStatus? filter) async {
+    emit(RequestsLoading(filter));
     try {
-      emit(RequestsSuccess(await _repo.getMyRequests()));
-    } catch (_) {
-      final msg = LocaleKeys.error_generic.tr();
-      AppOverlay.showError(msg);
-      emit(RequestsError(msg));
+      final (page, summary) = await _repo.getMyRequests(status: filter);
+      emit(RequestsSuccess(page: page, summary: summary, filter: filter));
+    } catch (e) {
+      emit(RequestsError(NetworkException.from(e).message, filter));
+    }
+  }
+
+  Future<void> refresh() async {
+    try {
+      final (page, summary) = await _repo.getMyRequests(status: filter);
+      emit(RequestsSuccess(page: page, summary: summary, filter: filter));
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
+    }
+  }
+
+  Future<void> loadMore() async {
+    final current = state;
+    if (current is! RequestsSuccess ||
+        !current.page.hasMore ||
+        current.page.loadingMore) {
+      return;
+    }
+    emit(current.copyWith(page: current.page.copyWith(loadingMore: true)));
+    try {
+      final (next, summary) = await _repo.getMyRequests(
+          status: current.filter, page: current.page.nextPage);
+      emit(current.copyWith(page: current.page.append(next), summary: summary));
+    } catch (e) {
+      emit(current);
+      AppOverlay.showError(NetworkException.from(e).message);
     }
   }
 
   Future<bool> submit({
     required RequestType type,
-    required String title,
-    required String subtitle,
     required String reason,
+    required Map<String, dynamic> payload,
   }) async {
-    final current = state is RequestsSuccess
-        ? (state as RequestsSuccess).requests
-        : const <RequestModel>[];
     try {
-      final request = await _repo.submit(RequestModel(
-        id: 'r${DateTime.now().millisecondsSinceEpoch}',
-        type: type,
-        title: title,
-        subtitle: subtitle,
-        status: RequestStatus.pending,
-        reason: reason,
-        when: LocaleKeys.common_now.tr(),
-      ));
-      emit(RequestsSuccess([request, ...current]));
+      await _repo.submit(type: type, reason: reason, payload: payload);
       AppOverlay.showSuccess(LocaleKeys.requests_sent.tr());
+      await refresh();
       return true;
-    } catch (_) {
-      AppOverlay.showError(LocaleKeys.error_generic.tr());
+    } catch (e) {
+      AppOverlay.showError(NetworkException.from(e).message);
       return false;
     }
   }

@@ -43,7 +43,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final user = getIt<AuthCubit>().restoreSession();
     final String route;
     if (user != null) {
-      route = user.isActive ? Routes.layoutScreen : Routes.pendingScreen;
+      route = Routes.layoutScreen;
     } else if (getIt<LocalStorage>().isOnboardingSeen) {
       route = Routes.loginScreen;
     } else {

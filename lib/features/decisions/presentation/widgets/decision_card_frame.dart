@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_emojis.dart';
 import '../../../../core/widgets/app_text.dart';
 import '../../../../core/widgets/status_chip.dart';
+import '../../../catalog/logic/catalog_cubit.dart';
 import '../../data/models/decision_model.dart';
 
 class DecisionCardFrame extends StatelessWidget {
@@ -44,7 +46,8 @@ class DecisionCardFrame extends StatelessWidget {
                     color: AppColors.warningTextColor.themeColor)
               else if (showAudience)
                 StatusChip(
-                    label: '${AppEmojis.users} ${decision.audience.label}'),
+                    label:
+                        '${AppEmojis.users} ${decision.audience.label(context.watch<CatalogCubit>().state.categoryName)}'),
             ],
           ),
           SizedBox(height: 8.h),

@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_emojis.dart';
 import '../../../../core/utils/locale_keys.dart';
@@ -31,8 +31,8 @@ class TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tasks = getIt<TasksCubit>();
-    final project = getIt<ProjectsCubit>().byId(task.projectId);
+    final tasks = context.read<TasksCubit>();
+    final projectColor = context.read<ProjectsCubit>().colorOf(task.projectId);
     final done = task.isDone;
     return FadeSlideIn(
       delay: Duration(milliseconds: index * 30),
@@ -112,11 +112,11 @@ class TaskCard extends StatelessWidget {
                       spacing: 6.w,
                       runSpacing: 6.h,
                       children: [
-                        if (!hideProject && project != null)
+                        if (!hideProject)
                           StatusChip(
                             small: true,
-                            label: project.name,
-                            leading: ProjectDot(color: project.color),
+                            label: task.projectName,
+                            leading: ProjectDot(color: projectColor),
                           ),
                         StatusChip(
                             small: true,

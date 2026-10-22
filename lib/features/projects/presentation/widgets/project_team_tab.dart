@@ -2,7 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_emojis.dart';
 import '../../../../core/utils/locale_keys.dart';
@@ -27,11 +27,11 @@ class ProjectTeamTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tasks = getIt<TasksCubit>().tasks;
-    final cubit = getIt<ProjectsCubit>();
-    int openOf(String name) => tasks
-        .where(
-            (t) => t.projectId == project.id && t.assignee == name && !t.isDone)
+    final tasks = context.watch<TasksCubit>().tasks;
+    final cubit = context.read<ProjectsCubit>();
+    int openOf(int userId) => tasks
+        .where((t) =>
+            t.projectId == project.id && t.assigneeId == userId && !t.isDone)
         .length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -54,7 +54,9 @@ class ProjectTeamTab extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      AppAvatar(name: project.team[i].name),
+                      AppAvatar(
+                          name: project.team[i].name,
+                          imagePath: project.team[i].image),
                       SizedBox(width: 12.w),
                       Expanded(
                         child: Column(
@@ -66,7 +68,7 @@ class ProjectTeamTab extends StatelessWidget {
                               children: [
                                 AppText(project.team[i].name,
                                     fontWeight: FontWeight.w700),
-                                if (project.manager == project.team[i].name)
+                                if (project.managerId == project.team[i].userId)
                                   StatusChip(
                                     small: true,
                                     label:
@@ -78,7 +80,7 @@ class ProjectTeamTab extends StatelessWidget {
                             AppText(
                               LocaleKeys.projects_memberOpen.tr(namedArgs: {
                                 'role': project.team[i].role,
-                                'n': '${openOf(project.team[i].name)}',
+                                'n': '${openOf(project.team[i].userId)}',
                               }),
                               fontSize: 11.5,
                               color: AppColors.textSecondaryColor.themeColor,
@@ -87,12 +89,12 @@ class ProjectTeamTab extends StatelessWidget {
                         ),
                       ),
                       if (isAdmin &&
-                          project.manager != project.team[i].name) ...[
+                          project.managerId != project.team[i].userId) ...[
                         SquareIconAction(
                           emoji: AppEmojis.star,
                           tooltip: LocaleKeys.projects_makeManager.tr(),
-                          onTap: () => cubit.setManager(
-                              project.id, project.team[i].name),
+                          onTap: () =>
+                              cubit.setManager(project.id, project.team[i]),
                         ),
                         SizedBox(width: 6.w),
                         SquareIconAction(
@@ -101,8 +103,8 @@ class ProjectTeamTab extends StatelessWidget {
                           tooltip: LocaleKeys.projects_removeMember.tr(),
                           onTap: () => cubit.removeMember(
                             project.id,
-                            project.team[i].name,
-                            openTasks: openOf(project.team[i].name),
+                            project.team[i],
+                            openTasks: openOf(project.team[i].userId),
                           ),
                         ),
                       ],

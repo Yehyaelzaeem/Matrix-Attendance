@@ -36,7 +36,7 @@ class BoardEmployeeCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            AppAvatar(name: entry.name),
+            AppAvatar(name: entry.name, imagePath: entry.image),
             SizedBox(width: 12.w),
             Expanded(
               child: Column(

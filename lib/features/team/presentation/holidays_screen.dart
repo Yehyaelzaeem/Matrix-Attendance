@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../core/di/injection.dart';
 import '../../../core/utils/app_colors.dart';
 import '../../../core/utils/locale_keys.dart';
 import '../../../core/widgets/app_fab.dart';
 import '../../../core/widgets/app_sheet.dart';
 import '../../../core/widgets/page_top_bar.dart';
+import '../../../core/widgets/pagination_widgets/pagination_list.dart';
+import '../../../core/widgets/screen_state_layout.dart';
+import '../data/models/holiday_model.dart';
 import '../logic/team_cubit.dart';
 import 'widgets/add_holiday_sheet.dart';
 import 'widgets/holiday_card.dart';
@@ -18,30 +20,43 @@ class HolidaysScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cubit = getIt<TeamCubit>()..load();
+    final cubit = context.read<TeamCubit>()..load();
     return Scaffold(
       backgroundColor: AppColors.backgroundColor.themeColor,
       body: BlocBuilder<TeamCubit, TeamState>(
-        bloc: cubit,
         builder: (context, state) {
-          final holidays = state is TeamSuccess ? state.holidays : const [];
+          final page = state is TeamSuccess ? state.holidays : null;
           return Stack(
             children: [
-              ListView(
-                padding: EdgeInsets.only(bottom: 110.h),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   PageTopBar(
                     title: LocaleKeys.team_holidaysTitle.tr(),
                     subtitle: LocaleKeys.team_holidaysCount
-                        .tr(namedArgs: {'n': '${holidays.length}'}),
+                        .tr(namedArgs: {'n': '${page?.total ?? 0}'}),
                     showBack: true,
                   ),
-                  for (final h in holidays)
-                    Padding(
-                      padding:
-                          EdgeInsetsDirectional.fromSTEB(20.w, 0, 20.w, 10.h),
-                      child: HolidayCard(holiday: h),
+                  Expanded(
+                    child: CustomScreenStateLayout(
+                      isLoading: state is TeamInitial || state is TeamLoading,
+                      error: state is TeamError
+                          ? ErrorModel(
+                              code: ErrorEnum.otherError,
+                              errorMessage: state.message)
+                          : null,
+                      onRetry: cubit.refresh,
+                      builder: (_) => CustomPaginationListView<HolidayModel>(
+                        itemCount: page!.items.length,
+                        hasMorePages: page.hasMore,
+                        isMoreLoading: page.loadingMore,
+                        onLoadMore: cubit.loadMoreHolidays,
+                        onRefresh: cubit.refresh,
+                        padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 110.h),
+                        builder: (_, i) => HolidayCard(holiday: page.items[i]),
+                      ),
                     ),
+                  ),
                 ],
               ),
               PositionedDirectional(

@@ -2,7 +2,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/models/day_type.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../../core/utils/app_emojis.dart';
 import '../../../../core/utils/locale_keys.dart';
@@ -11,9 +10,9 @@ import '../../../../core/widgets/emoji_box.dart';
 import '../../../board/data/models/board_entry.dart';
 
 class AdminKpiGrid extends StatelessWidget {
-  const AdminKpiGrid({super.key, required this.day});
+  const AdminKpiGrid({super.key, required this.summary});
 
-  final BoardDay day;
+  final BoardSummary summary;
 
   Widget _tile(String emoji, Color bg, String value, String label) => Container(
         padding: EdgeInsets.all(14.r),
@@ -55,13 +54,13 @@ class AdminKpiGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final tiles = [
       _tile(AppEmojis.office, AppColors.primarySoftColor.themeColor,
-          '${day.atLocation(DayType.office)}', LocaleKeys.admin_atOffice.tr()),
+          '${summary.office}', LocaleKeys.admin_atOffice.tr()),
       _tile(AppEmojis.home, AppColors.violetSoftColor.themeColor,
-          '${day.atLocation(DayType.home)}', LocaleKeys.admin_fromHome.tr()),
+          '${summary.home}', LocaleKeys.admin_fromHome.tr()),
       _tile(AppEmojis.alarm, AppColors.warningSoftColor.themeColor,
-          '${day.count(BoardStatus.late)}', LocaleKeys.admin_late.tr()),
+          '${summary.late}', LocaleKeys.admin_late.tr()),
       _tile(AppEmojis.noEntry, AppColors.errorSoftColor.themeColor,
-          '${day.count(BoardStatus.absent)}', LocaleKeys.admin_notArrived.tr()),
+          '${summary.absent}', LocaleKeys.admin_notArrived.tr()),
     ];
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 18.w),

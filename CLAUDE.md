@@ -23,6 +23,7 @@ lib/
       dio_client.dart          # DioClient (get/post/put/patch/delete/postForm/putForm) + Auth/Lang interceptors
       api_endpoints.dart        # كل الـ paths (base + endpoints) في مكان واحد
       api_response.dart         # ApiResponse<T> wrapper عام (message/status/data)
+      api_handler.dart          # mixin ApiHandler: guard / dataOf / fetch — هاندلة الـ response والأخطاء لكل الـ Repos
       network_exceptions.dart   # NetworkException.fromDioException(e)
     storage/local_storage.dart # GetStorage (عادي) + FlutterSecureStorage (للـ token فقط)
     utils/
@@ -53,7 +54,7 @@ lib/
 
 **الأدوار:** `UserRole.employee` / `reviewer` / `admin` (في `auth/data/models/user_role.dart`). التابات بتتحدد من `AppTab.forRole(role)`، والدور جاي من حساب المستخدم مش بيختاره.
 
-**مرحلة التصميم (Mock data):** كل الـ Repos حاليًا بترجع داتا وهمية من الذاكرة (`Future.delayed(AppConstants.mockLatency)`) بدل `DioClient`. لما الـ API يجهز، عدّل جوا الـ Repo بس (نفس الـ signatures) والـ Cubits والشاشات مش هتتغير. أرقام الدخول التجريبية في `AuthRepo`: `01000000001` مراجع، `01000000002` إدارة، أي رقم تاني موظف، وأي OTP من 6 أرقام بيعدي.
+**الـ API:** كل الـ Repos مربوطة بالباك إند الحقيقي (`ApiEndpoints.baseUrl`). الـ JSON بيتقري بـ `JsonReader` والـ enums بـ `EnumValue` (`{key, value}`).
 
 ---
 
@@ -148,7 +149,12 @@ UI (Screen)
 ```
 
 نقط مهمة:
-- **الـ Cubit لا يكلم `DioClient` مباشرة أبدًا** — دايمًا عن طريق `Repo`. الـ `Repo` هو اللي فيه try/catch على `DioException` ويحوّله لـ `NetworkException`.
+- **هاندلة الـ response والأخطاء مركزية في `ApiHandler`** (`core/network/api_handler.dart`) — كل Repo بيعمل `class XRepo with ApiHandler` ويستخدم:
+  - `guard(() async { ... })` → بيلف الـ request ويحوّل `DioException` لـ `NetworkException`.
+  - `dataOf(response)` → بيرجع `data` من الـ envelope كـ `Map` (أو `{}` لو مش موجود).
+  - `fetch(() => _dio.get(...))` → `guard` + `dataOf` في سطر واحد.
+  - **ممنوع** تكتب `_guard` / `_data` / `try { } on DioException` / `JsonReader.map(response.data)['data']` جوا أي Repo تاني. لو محتاج هاندلة جديدة مشتركة (status خاص، شكل response مختلف) ضيفها في `ApiHandler` مش في الـ Repo.
+- **الـ Cubit لا يكلم `DioClient` مباشرة أبدًا** — دايمًا عن طريق `Repo`. الـ `Repo` بيلف كل نداء بـ `guard` من `ApiHandler` اللي بيحوّل `DioException` لـ `NetworkException`.
 - الـ Repos بتاخد dependencies بتاعتها (`DioClient`, `LocalStorage`) في الـ constructor، ومسجلة كـ `registerLazySingleton` في `injection.dart`. الـ Cubits مسجلة كـ `registerFactory` (نسخة جديدة كل مرة تتعمل provide) — إلا لو محتاجة تعيش طول الـ session (زي `QueueCubit`/`OrdersCubit`) فبتتسجل `registerLazySingleton`.
 - شكل الـ Response القياسي من الباك إند: `{ "message": str, "status": bool, "data": {...} }` — فيه `ApiResponse<T>` جاهز لو حبيت تستخدمه، لكن الـ Repos الحالية بتعمل parsing يدوي من `response.data['data']`.
 - الـ States دايمًا `sealed class` بأربع حالات أساسية: `Initial` / `Loading` / `Success(data)` / `Error(message)`، معمولة بـ `Equatable`، وموجودة في ملف `part of` منفصل (`<feature>_state.dart`).
@@ -158,18 +164,32 @@ UI (Screen)
 
 ### 6.1) اختيار الأداة الصح: BlocBuilder / BlocListener / BlocConsumer / context.watch / context.read
 
-قاعدة تتطبق على أي كود جديد أو أي شاشة بتتلمس من دلوقتي — ممنوع تتنسى:
+كل الـ Cubits اللي بتعيش طول الجلسة متوفرة app-wide من `SessionScope` (`lib/app/session_scope.dart`) كـ `BlocProvider.value(getIt<X>())` فوق الـ `MaterialApp`: `AuthCubit`, `LayoutCubit`, `CatalogCubit`, `DashboardCubit`, `AttendanceCubit`, `BoardCubit`, `TeamCubit`, `TasksCubit`, `ProjectsCubit`, `RequestsCubit`, `DecisionsCubit`, `NotificationsCubit`, `ApprovalsCubit`, `ApprovalsTabCubit`, `ReportsCubit`. بعد الخروج `resetSession()` بيعمل نسخ جديدة و`SessionScope.restart()` بيعيد بناء الـ providers. أي Cubit جلسة جديد لازم يتضاف هنا + في `resetSession()`.
 
-- **عرض + فعل جانبي مع بعض من نفس الـ Cubit** (مثال: زرار submit بيعمل loading + بعد النجاح يعمل navigation/توست) → **`BlocConsumer`**، مش `BlocListener` بيلف `BlocBuilder` بشكل منفصل. الاتنين شغالين بنفس الظبط من جوا `flutter_bloc` (`BlocConsumer` هو حرفيًا `BlocListener` بيلف `BlocBuilder`)، لكن `BlocConsumer` أقل nesting فهو الافتراضي. الـ side effects (`Navigator.push*`, `AppOverlay.show*`, `showDialog`) دايمًا في `listener`، أبدًا في `builder` — الـ `builder` ممكن يتنفذ أكتر من مرة لأسباب تانية غير تغيّر الـ state، فأي side effect فيه ممكن يتكرر/يتنفذ في توقيت غلط.
-- **محتاج تعرض جزء بسيط من الـ state جوا widget معين** (مش الشاشة كلها) → **`context.watch<XCubit>()`** *لو* الـ Cubit ده متوفر كـ `BlocProvider` أب في شجرة الـ widgets (دلوقتي: `AuthCubit` بس — المتاحين app-wide من `MultiBlocProvider` في `app.dart`). لأي Cubit تاني (المعظم — مسجّل `registerFactory`/`registerLazySingleton` في GetIt **من غير** `BlocProvider`) استخدم بدلاً منه `BlocBuilder` مُصغّر النطاق حوالين الـ widget الصغير بس (`bloc: _cubit`) — نفس فكرة الـ rebuild المحدود، لكن من غير الحاجة لـ `BlocProvider` أب.
-- **مجرد نداء فعل/method** (`submit`, `reset`, `toggle`...) **من غير ما محتاج تعرض حاجة من الـ state** → **ممنوع** تلف الشاشة (أو أي جزء منها) في `BlocBuilder`/`BlocConsumer` عشان بس توصل لنسخة الـ Cubit. استخدم:
-  - `context.read<XCubit>().method()` لو الـ Cubit تريّ-بروفايدد (`AuthCubit` بس حاليًا).
-  - `getIt<XCubit>().method()` أو الـ `_cubit` المخزّن (`late final _cubit = getIt<XCubit>()..loadX();`) لأي Cubit تاني.
-- **الخلاصة:** `Builder` للعرض، `Listener` للفعل الجانبي، `Consumer` للاتنين مع بعض، `watch` لقراءة صغيرة جوا widget، `read` لنداء فعل بس.
+- **في الـ UI ممنوع `getIt<XCubit>()`** لأي Cubit من دول — استخدم `context.read` / `context.watch` / `BlocBuilder<X, XState>` من غير `bloc:`.
+- **عرض + فعل جانبي من نفس الـ Cubit** → `BlocConsumer` (الـ side effects زي `Navigator`/`AppOverlay`/`showDialog` في `listener` بس، أبدًا في `builder`).
+- **عرض جزء من الـ state** → `context.watch<XCubit>()` جوا الـ widget الصغير، أو `BlocBuilder<XCubit, XState>` مُصغّر النطاق.
+- **نداء method بس** → `context.read<XCubit>().method()` (أو `late final _cubit = context.read<XCubit>()..load();` في الـ State). ممنوع تلف حاجة في `BlocBuilder` عشان توصل للنسخة.
+- **تحميل الداتا أول ما الشاشة تفتح يتعمل في `initState`** (`_cubit.load();`)، **ممنوع** `late final _cubit = context.read<X>()..load();` — الـ `late` lazy، فالـ `load` مش بيتنفذ غير أول مرة حد يلمس `_cubit`، ولو `_cubit` مستخدم بس جوا callback (`() => _cubit.x()`) الشاشة هتفضل Loading للأبد (ده اللي حصل في شاشة الحضور).
+- **Cubits الشاشة الواحدة** (`registerFactory`: `EmployeesCubit`, `EmployeeDetailCubit`, `ReportDetailCubit`) بتتوفر بـ `BlocProvider(create: (_) => getIt<X>()..load())` في الشاشة نفسها، وتحتها نفس قواعد `read`/`watch`.
+- `context.watch` بيعمل rebuild للـ widget كله؛ متستخدموش في شاشة كبيرة لو محتاج بس جزء صغير — صغّر النطاق بـ widget منفصل أو `BlocBuilder`.
 
-⚠️ **ملاحظة معمارية مهمة (سبب وجود الاستثناء فوق):** `context.watch`/`context.read` مبيشتغلوش إلا مع Cubit متاح فعليًا كـ `BlocProvider` أب في شجرة الـ widgets. غالبية الـ Cubits في المشروع (`TasksCubit`, `ProjectsCubit`, `DecisionsCubit`, `ReportsCubit`...) مسجّلة في GetIt **من غير** `BlocProvider` مقابلهم — استخدامهم بـ `context.read`/`context.watch` هيرمي `ProviderNotFoundException` (ده بالظبط البَج اللي حصل قبل كده مع `QueueCubit`/`DashboardCubit`). الاستثناء الوحيد دلوقتي: `AuthCubit`. لو حسّيت إنك محتاج `context.watch`/`context.read` مع Cubit تاني، الحل مش إنك "تلفه بـ BlocProvider جديد" من غير داعي — استخدم الـ GetIt pattern العادي (`getIt<XCubit>()` / `bloc:` صريح) زي باقي الشاشات.
+### 6.1.1) الفورمز وعمليات الـ submit
 
----
+- **أي submit ليه loading/نجاح/فشل** (إضافة موظف، إنشاء مشروع...) → Cubit خاص بالفورم (`registerFactory`) بحالات `Initial/Loading/Success/Error`، ومتوفر بـ `BlocProvider(create: (_) => getIt<X>())` في ملف الشيت/الشاشة، والفورم نفسها في widget منفصل تحته (مثال: `AddEmployeeSheet` → `AddEmployeeForm` + `AddEmployeeCubit`).
+- **ممنوع `bool _saving` + `setState`** للـ loading — الـ loading جاي من الـ state (`state is XLoading`) جوا `BlocConsumer` حوالين الزرار بس، والـ `pop` + `AppOverlay.showSuccess` في الـ `listener`.
+- **ممنوع `onChanged: (_) => setState(() {})`** عشان تحدّث `enabled` بتاع الزرار — ده بيعيد بناء الفورم كلها مع كل حرف. استخدم `ListenableBuilder(listenable: Listenable.merge([controllers...]))` حوالين الزرار بس.
+- `setState` مسموح بس لاختيارات UI محلية بضغطة صريحة (اختيار من chips/toggle/picker)، مش مع الكتابة.
+- **امنع الـ double submit** من الـ Cubit نفسه: `if (state is XLoading || state is XSuccess) return;`.
+- **العملية اللي فيها أكتر من request** (إنشاء + ربط بمشاريع...) تتعمل كلها جوا Cubit الفورم عن طريق الـ Repos مباشرة (بـ `Future.wait` لو مستقلين)، وبعدين تحدّث Cubits الجلسة **مرة واحدة** (`upsert` / `putAll`). ممنوع تنادي method في Cubit جلسة جوا loop (كل نداء = emit + rebuild + توست).
+- جوا الفورم متستخدمش `context.watch` لداتا محتاجها مرة واحدة (زي لستة المشاريع للاختيار) — اقراها مرة بـ `late final ... = context.read<X>()...`.
+- `context.read<XCubit>()` لـ Cubit جلسة **مش بيعمل نسخة جديدة** — بيرجع نفس الـ singleton اللي في `SessionScope` (نفس `getIt<XCubit>()` بالظبط). اللي بيعمل نسخة جديدة هو `getIt<X>()` لـ Cubit مسجّل `registerFactory`، فده يتعمل مرة واحدة بس في `BlocProvider(create:)` (وهو اللي بيقفله لوحده).
+
+### 6.2) الـ Pagination وحالات الشاشة
+
+- أي لستة من API فيها `meta` → `Paginated<T>` (`core/models/paginated.dart`) في الـ State، والـ Cubit فيه `load` / `refresh` / `loadMore` (بيحط `loadingMore: true` وبعدين `append`).
+- العرض دايمًا بـ `CustomPaginationListView` (`itemCount`, `hasMorePages: page.hasMore`, `isMoreLoading: page.loadingMore`, `onLoadMore`, `onRefresh`, `emptyMessage`) جوا `CustomScreenStateLayout` (`isLoading` / `error: ErrorModel(...)` / `onRetry`).
+- الـ API من غير `page` بيرجع كل الصفوف — ده بيتستخدم بس لما التصميم محتاج عدّادات/تجميعات على الكل (زي التاسكات والمشاريع).
 
 ## 7) Routing
 

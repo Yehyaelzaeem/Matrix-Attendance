@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../../core/di/injection.dart';
 import '../../../../core/utils/app_colors.dart';
 import '../../../admin/logic/approvals_cubit.dart';
 import '../../logic/app_tab.dart';
@@ -38,7 +37,6 @@ class AppBottomNav extends StatelessWidget {
                 Expanded(
                   child: tab == AppTab.approvals
                       ? BlocBuilder<ApprovalsCubit, ApprovalsState>(
-                          bloc: getIt<ApprovalsCubit>(),
                           builder: (_, state) => NavItem(
                             tab: tab,
                             selected: tab == current,
